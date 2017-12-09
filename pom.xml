@@ -4,13 +4,13 @@
 	<parent>
 		<groupId>com.hof.epos</groupId>
 		<artifactId>utility-core</artifactId>
-		<version>1.0.0-SNAPSHOT</version>
+		<version>1.0.1-SNAPSHOT</version>
 	</parent>
 
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.hof.epos</groupId>
 	<artifactId>users-api</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>1.0.1-SNAPSHOT</version>
 	<packaging>mule</packaging>
 	<name>Mule users-api App</name>
 
