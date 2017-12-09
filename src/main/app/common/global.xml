@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
+	xmlns:secure-property-placeholder="http://www.mulesoft.org/schema/mule/secure-property-placeholder"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/secure-property-placeholder http://www.mulesoft.org/schema/mule/secure-property-placeholder/current/mule-secure-property-placeholder.xsd">
+
+
+	<http:listener-config name="users-api-httpListenerConfig"
+		host="${http.host}" port="${http.port}" doc:name="HTTP Listener Configuration" />
+	<apikit:config name="users-api-config" raml="users-api.raml"
+		consoleEnabled="false" doc:name="Router" />
+	<spring:beans>
+		<spring:import resource="classpath:common-flows.xml" />
+        <spring:bean id="ODS_DataSource" name="ODS_DataSource" class="org.enhydra.jdbc.standard.StandardDataSource">
+            <spring:property name="driverName" value="${db.driverName}"/>
+            <spring:property name="url" value="${db.url}"/>
+            <spring:property name="password" value="${db.password}"/>
+            <spring:property name="user" value="${db.user}"/>
+        </spring:bean>
+	</spring:beans>
+	<db:generic-config name="Generic_Database_Configuration"   doc:name="Generic Database Configuration" dataSource-ref="ODS_DataSource"/>
+
+	<secure-property-placeholder:config
+		name="Secure_Property_Placeholder" key="${properties.key}"
+		location="properties/global.properties,properties/${mule.env}.properties"
+		doc:name="Secure Property Placeholder" />
+
+</mule>

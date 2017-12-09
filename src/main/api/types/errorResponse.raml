@@ -1,0 +1,21 @@
+#%RAML 1.0 DataType
+description: Error Response format for all errors.
+type: object
+properties:
+  message:
+    type: string
+  errorDetail:
+    type: string
+  transactionID:
+    type: string
+  messageID:
+    type: string
+  timestamp:
+    type: string
+examples:
+  creationError:
+    message: "The application has encountered an unknown error. It doesn't appear to have affected your data, but our technical staff have been automatically notified and will be looking into this."
+    errorDetail: "null"
+    transactionID: "585"
+    messageID: "974"
+    timestamp: "2017-10-26T16:24:31.475+01:00"

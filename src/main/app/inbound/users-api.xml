@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+
+	<flow name="users-api-main">
+		<http:listener config-ref="users-api-httpListenerConfig" path="/api/*"
+			doc:name="HTTP" />
+		<flow-ref name="common-initiation-subflow" doc:name="common-initiation-subflow" />
+        <response>
+            <flow-ref name="common-completion-subflow" doc:name="common-completion-subflow_Call"/>
+        </response>
+
+
+		<apikit:router config-ref="users-api-config" doc:name="APIkit Router" />
+		<exception-strategy ref="apiKitGlobalExceptionMapping"
+			doc:name="Reference Exception Strategy" />
+	</flow>
+	<flow name="users-api-console">
+		<http:listener config-ref="users-api-httpListenerConfig" path="/console/*"
+			doc:name="HTTP" />
+		<apikit:console config-ref="users-api-config" doc:name="APIkit Console" />
+	</flow>
+	<flow name="patch:/users/storeusers:application/json:users-api-config">
+		<logger level="INFO" doc:name="Upsert Users Entry Logger"
+			message="--#[server.dateTime]-- Entered into App: #[app.name]-- Flow: #[flow.name]-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--" />
+		<flow-ref name="upsert-users-request-prepration-Sub_Flow"
+			doc:name="upsert-users-request-prepration-Sub_Flow_Call" />
+		<set-property propertyName="http.status" value="${upsert.users.success.status.code}"
+			doc:name="Assigning 204 to Status Code" />
+		<logger
+			message="--#[server.dateTime]-- Exit from App: #[app.name]-- Flow: #[flow.name]-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--"
+			level="INFO" doc:name="Upsert Users Exit Logger" />
+		<exception-strategy
+			ref="users-api-error-handlingChoice_Exception_Strategy" doc:name="Reference Exception Strategy" />
+	</flow>
+	<flow name="get:/users/storeusers:users-api-config">
+		<logger
+			message="--#[server.dateTime]-- Entered into App: #[app.name]-- Flow: #[flow.name]-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--"
+			level="INFO" doc:name="Get Users Entry Logger" />
+		<message-properties-transformer scope="invocation"
+			doc:name="Converting Query Parms to Flow Variables">
+			<add-message-property key="status"
+				value="#[message.inboundProperties.'http.query.params'.status]" />
+			<add-message-property key="changeId"
+				value="#[message.inboundProperties.'http.query.params'.changeid]" />
+			<add-message-property key="startRecord"
+				value="#[message.inboundProperties.'http.query.params'.startrecord]" />
+			<add-message-property key="endRecord"
+				value="#[message.inboundProperties.'http.query.params'.endrecord]" />
+		</message-properties-transformer>
+		<flow-ref name="get-users-request-prepration-Sub_Flow"
+			doc:name="get-users-request-prepration-Sub_Flow_Call" />
+		<logger level="INFO" doc:name="Get Users Exit Logger"
+			message="--#[server.dateTime]-- Exit from App: #[app.name]-- Flow: #[flow.name]-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--" />
+		<exception-strategy
+			ref="users-api-error-handlingChoice_Exception_Strategy" doc:name="Reference Exception Strategy" />
+
+	</flow>
+
+</mule>

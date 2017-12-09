@@ -1,0 +1,18 @@
+{
+  "users": [
+    {
+      "employeeID": "984802",
+      "fullName": "MRS. Siva Chandra",
+      "receiptName": "Siva",
+      "status": "Active",
+      "workGroupID": "2"
+    },
+    {
+      "employeeID": "984803",
+      "fullName": "MRS. Ramesh",
+      "receiptName": "Ramesh",
+      "status": "Inactive",
+      "workGroupID": "1"
+    }
+  ]
+}

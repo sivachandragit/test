@@ -1,0 +1,70 @@
+{
+  "users": [
+    {
+      "employeeID": "0123456",
+      "fullName": "MRS. Siva Chandra",
+      "receiptName": "Siva",
+      "status": "Active",
+      "workGroupID": "2"
+    },
+    {
+      "employeeID": "101897",
+      "fullName": "MRS. Ramesh Chandra",
+      "receiptName": "Ramesh",
+      "status": "Active",
+      "workGroupID": "6"
+    },
+    {
+      "employeeID": "223456",
+      "fullName": "MISS Abc Def",
+      "receiptName": "Abc",
+      "status": "Active",
+      "swipeCards": [
+        {
+          "cardNumber": "098176",
+          "cardEffectiveFrom": "2016/11/03 00:00"
+        }
+      ],
+      "workGroupID": "1"
+    },
+    {
+      "employeeID": "827341",
+      "fullName": "MISS Ghi Jkl",
+      "receiptName": "Ghi",
+      "status": "Active",
+      "swipeCards": [
+        {
+          "cardNumber": "910238",
+          "cardEffectiveFrom": "2013/05/01 00:00",
+          "cardEffectiveTo": "2016/11/02 23:59"
+        },
+        {
+          "cardNumber": "817271",
+          "cardEffectiveFrom": "2016/11/03 00:00"
+        }
+      ],
+      "workGroupID": "6"
+    },
+    {
+      "employeeID": "561039",
+      "fullName": "MISS Mno Pqr",
+      "receiptName": "Mno",
+      "status": "Active",
+      "workGroupID": "1"
+    },
+    {
+      "employeeID": "192018",
+      "fullName": "MR. Stu Vwx",
+      "receiptName": "Stu",
+      "status": "Inactive",
+      "swipeCards": [
+        {
+          "cardNumber": "091826",
+          "cardEffectiveFrom": "2016/02/16 00:00",
+          "cardEffectiveTo": "2016/10/25 23:59"
+        }
+      ],
+      "workGroupID": "1"
+    }
+  ]
+}

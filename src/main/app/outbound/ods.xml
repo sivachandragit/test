@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+	<sub-flow name="upsert_users_into_ODS-Sub_Flow">
+		<logger
+			message="--#[server.dateTime]-- Entered into App: #[app.name]-- Flow: #[flow.name]-- Sub Flow: upsert-users-request-prepration-Sub_Flow-- Sub Flow: upsert_users_into_ODS-Sub_Flow-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--"
+			level="INFO" doc:name="upsert_users_into_ODS-Sub_Flow Entry Logger" />
+		<ee:multi-transactional action="ALWAYS_BEGIN"
+			doc:name="Transactional">
+			<set-payload value="#[flowVars.newUsersInfo]" doc:name="New Users Payload" />
+			<db:insert config-ref="Generic_Database_Configuration"
+				bulkMode="true" doc:name="New Users Insertion">
+				<db:parameterized-query><![CDATA[INSERT INTO USERS (EMPLOYEEID, FULLNAME, RECEIPTNAME, IS_ACTIVE, WORKGROUPID) VALUES(#[payload.employeeID],#[payload.fullName],#[payload.receiptName],#[payload.status],#[payload.workGroupID]);]]></db:parameterized-query>
+			</db:insert>
+			<set-payload value="#[flowVars.newSwipeCardsInfo]"
+				doc:name="New SwipeCards Payload" />
+			<db:insert config-ref="Generic_Database_Configuration"
+				bulkMode="true" doc:name="New SwipeCards Insertion">
+				<db:parameterized-query><![CDATA[INSERT INTO STORE_USER_SWIPE_CARDS (EMPLOYEEID, CARDNUMBER, CARDEFFECTIVEFROM, CARDEFFECTIVETO) values (#[payload.employeeID], #[payload.cardNumber], #[payload.cardEffectiveFrom], #[payload.cardEffectiveTo]);]]></db:parameterized-query>
+			</db:insert>
+			<set-payload value="#[flowVars.updateUsersInfo]"
+				doc:name="Updated Users Payload" />
+			<db:update config-ref="Generic_Database_Configuration"
+				bulkMode="true" doc:name="Existing Users Updation">
+				<db:parameterized-query><![CDATA[UPDATE USERS SET FULLNAME=#[payload.fullName], RECEIPTNAME=#[payload.receiptName],  IS_ACTIVE=#[payload.status], WORKGROUPID=#[payload.workGroupID] where EMPLOYEEID=#[payload.employeeID];]]></db:parameterized-query>
+			</db:update>
+			<set-payload value="#[flowVars.updateSwipeCardsInfo]"
+				doc:name="Updated SwipeCards Payload" />
+			<db:update config-ref="Generic_Database_Configuration"
+				bulkMode="true" doc:name="Existing SwipeCards Updation">
+				<db:parameterized-query><![CDATA[UPDATE STORE_USER_SWIPE_CARDS SET CARDNUMBER=#[payload.cardNumber], CARDEFFECTIVEFROM=#[payload.cardEffectiveFrom], CARDEFFECTIVETO=#[payload.cardEffectiveTo] where EMPLOYEEID=#[payload.employeeID] and CARDNUMBER=#[payload.cardNumber];]]></db:parameterized-query>
+			</db:update>
+			<set-payload value="#[flowVars.newSwipeCardsInfoInUpdate]"
+				doc:name="New SwipeCards Under Update Payload" />
+			<db:insert config-ref="Generic_Database_Configuration"
+				bulkMode="true" doc:name="New Swipe Cards under update insertion">
+				<db:parameterized-query><![CDATA[INSERT INTO STORE_USER_SWIPE_CARDS (EMPLOYEEID, CARDNUMBER, CARDEFFECTIVEFROM, CARDEFFECTIVETO) values (#[payload.employeeID], #[payload.cardNumber], #[payload.cardEffectiveFrom], #[payload.cardEffectiveTo]);]]></db:parameterized-query>
+			</db:insert>
+			<set-payload value="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeIds Payload" />
+			<db:insert config-ref="Generic_Database_Configuration"
+				bulkMode="true" doc:name="User Change Audit">
+				<db:parameterized-query><![CDATA[INSERT INTO USER_CHANGE_AUDIT (CHANGE_ID, EMPLOYEEID) VALUES(#[flowVars.correlationID], #[payload])]]></db:parameterized-query>
+			</db:insert>
+		</ee:multi-transactional>
+		<logger
+			message="--#[server.dateTime]-- Exit from App: #[app.name]-- Flow: #[flow.name]-- Sub Flow: upsert-users-request-prepration-Sub_Flow-- Sub Flow: upsert_users_into_ODS-Sub_Flow-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--"
+			level="INFO" doc:name="upsert_users_into_ODS-Sub_Flow Exit Logger" />
+	</sub-flow>
+	<sub-flow name="pull_users_count_and_users_from_ODS-Sub_Flow">
+		<logger
+			message="--#[server.dateTime]-- Entered into App: #[app.name]-- Flow: #[flow.name]-- Sub Flow: get-users-request-prepration-Sub_Flow-- Sub Flow: pull_users_count_and_users_from_ODS-Sub_Flow-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]-- status: #[flowVars.status]-- changeid: #[flowVars.changeId]--"
+			level="INFO" doc:name="pull_users_count_and_users_from_ODS-Sub_Flow Entry Logger" />
+		<logger
+			message="Before calling ODS to get the records count-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]-- status: #[flowVars.status]-- changeid: #[flowVars.changeId]-- #[server.dateTime]---"
+			level="INFO" doc:name="Logger before calling DB to get users count" />
+		<db:select config-ref="Generic_Database_Configuration"
+			doc:name="Get Users Count">
+			<db:dynamic-query><![CDATA[#[flowVars.countQuery]]]></db:dynamic-query>
+		</db:select>
+		<logger
+			message="After calling ODS to get the records count-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]-- status: #[flowVars.status]-- changeid: #[flowVars.changeId]-- #[server.dateTime]---"
+			level="INFO" doc:name="Logger after calling DB to get users count" />
+		<set-property propertyName="Total-Records" value="#[payload[0].count]"
+			doc:name="Total Users Count" />
+		<logger
+			message="Before calling ODS to get the users based on received start record, end record, status and changeId-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]-- status: #[flowVars.status]-- changeid: #[flowVars.changeId]-- #[server.dateTime]---"
+			level="INFO" doc:name="Logger before calling DB to get users" />
+		<db:select config-ref="Generic_Database_Configuration"
+			doc:name="Get Users">
+			<db:dynamic-query><![CDATA[#[flowVars.getUsersQuery]]]></db:dynamic-query>
+		</db:select>
+		<logger
+			message="After calling ODS to get the users based on received start record, end record, status and changeId-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]-- status: #[flowVars.status]-- changeid: #[flowVars.changeId]-- #[server.dateTime]---"
+			level="INFO" doc:name="Logger after calling DB to get users" />
+
+
+		<logger
+			message="--#[server.dateTime]-- Exit from App: #[app.name]-- Flow: #[flow.name]-- Sub Flow: get-users-request-prepration-Sub_Flow-- Sub Flow: pull_users_count_and_users_from_ODS-Sub_Flow-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]-- status: #[flowVars.status]-- changeid: #[flowVars.changeId]--"
+			level="INFO" doc:name="pull_users_count_and_users_from_ODS-Sub_Flow Exit Logger" />
+	</sub-flow>
+	<sub-flow name="pull_existing_users_from_ODS-Sub_Flow">
+		<logger
+			message="--#[server.dateTime]-- Entered into App: #[app.name]-- Flow: #[flow.name]-- Sub Flow: upsert-users-request-prepration-Sub_Flow-- Sub Flow: pull_existing_users_from_ODS-Sub_Flow-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--"
+			level="INFO" doc:name="pull_existing_users_from_ODS-Sub_Flow Entry Logger" />
+		<db:select config-ref="Generic_Database_Configuration"
+			doc:name="Get Existing Users">
+			<db:dynamic-query><![CDATA[${GET_EXISTING_USERS}]]></db:dynamic-query>
+		</db:select>
+		<logger
+			message="--#[server.dateTime]-- Exit from App: #[app.name]-- Flow: #[flow.name]-- Sub Flow: upsert-users-request-prepration-Sub_Flow-- Sub Flow: pull_existing_users_from_ODS-Sub_Flow-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--"
+			level="INFO" doc:name="pull_existing_users_from_ODS-Sub_Flow Exit Logger" />
+	</sub-flow>
+</mule>

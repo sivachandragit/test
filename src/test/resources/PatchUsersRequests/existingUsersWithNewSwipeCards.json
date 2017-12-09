@@ -1,0 +1,43 @@
+{
+  "users": [
+  	{
+      "employeeID": "984819",
+      "fullName": "MRS. Ramesh",
+      "receiptName": "Ramesh",
+      "status": "Active",
+      "swipeCards": [
+        {
+          "cardNumber": "984641",
+          "cardEffectiveFrom": "2013/05/01 00:00",
+          "cardEffectiveTo": "2016/11/02 23:59"
+        },
+        {
+          "cardNumber": "984642",
+          "cardEffectiveFrom": "2014/05/01 00:00",
+          "cardEffectiveTo": "2017/11/02 23:59"
+        }
+      ],
+      "workGroupID": "5"
+    },
+    {
+      "employeeID": "984820",
+      "fullName": "MRS. Siva Chandra",
+      "receiptName": "Siva",
+      "status": "Active",
+      "swipeCards": [
+        {
+          "cardNumber": "984643",
+          "cardEffectiveFrom": "2013/05/01 00:00",
+          "cardEffectiveTo": "2016/11/02 23:59"
+        },
+        {
+          "cardNumber": "984644",
+          "cardEffectiveFrom": "2014/05/01 00:00",
+          "cardEffectiveTo": "2017/11/02 23:59"
+        }
+      ],
+      "workGroupID": "6"
+    }
+  ]
+  
+}

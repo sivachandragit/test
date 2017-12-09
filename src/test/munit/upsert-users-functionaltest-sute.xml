@@ -1,0 +1,709 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:mock="http://www.mulesoft.org/schema/mule/mock"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:dbserver="http://www.mulesoft.org/schema/mule/dbserver"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/mock/current/mule-mock.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/dbserver http://www.mulesoft.org/schema/mule/dbserver/current/mule-dbserver.xsd">
+	<munit:config name="munit" doc:name="MUnit configuration"
+		mock-connectors="false" mock-inbounds="false" />
+	<spring:beans>
+		<spring:import resource="classpath:inbound/users-api.xml" />
+		<spring:import resource="classpath:common/error-handling.xml" />
+		<spring:import resource="classpath:services/get-users.xml" />
+		<spring:import resource="classpath:common/global.xml" />
+		<spring:import resource="classpath:services/upsert-users.xml" />
+		<spring:import resource="classpath:outbound/ods.xml" />
+	</spring:beans>
+	<http:request-config name="HTTP_Request_Configuration"
+		host="localhost" port="8081" basePath="/api" doc:name="HTTP Request Configuration"
+		responseTimeout="3000000" />
+	<dbserver:config name="UpsertUsers_DB_Server" database="MyDB"
+		sqlFile="InMemoryDBScripts/UpsertUsers.sql" connectionStringParameters="MODE=MySQL"
+		doc:name="DB Server" />
+	<munit:before-suite name="upsert-users-functionaltest-suteBefore_Suite"
+		description="MUnit Test">
+		<dbserver:start-db-server config-ref="UpsertUsers_DB_Server"
+			doc:name="Start DB Server" />
+	</munit:before-suite>
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-EmptyUsersTest"
+		description="Verifying functionality of empty users request" >
+		<set-payload
+			value="#[getResource('PatchUsersRequests/emptyRequest.json').asString()]"
+			doc:name="Empty Users Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50a" />
+			</http:request-builder>
+		</http:request>
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-NewUserTest"
+		description="Verifying functionality of inserting new user without swipe card into ODS"
+		>
+		<set-payload
+			value="#[getResource('PatchUsersRequests/newUser.json').asString()]"
+			doc:name="New User Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50a" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USERS WHERE EMPLOYEEID='984801';"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;\n&quot;984801&quot;,&quot;MRS. Siva Chandra&quot;,&quot;Siva&quot;,&quot;true&quot;,&quot;2&quot;"
+			doc:name="Validate That User Inserted In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50a';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50a&quot;,&quot;984801&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-NewUsersTest"
+		description="Verifying functionality of inserting new users without swipe card into ODS"
+		>
+		<set-payload
+			value="#[getResource('PatchUsersRequests/newUsers.json').asString()]"
+			doc:name="New Users Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50r"/>
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USERS WHERE EMPLOYEEID in('984802','984803');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;\n&quot;984802&quot;,&quot;MRS. Siva Chandra&quot;,&quot;Siva&quot;,&quot;true&quot;,&quot;2&quot;\n&quot;984803&quot;,&quot;MRS. Ramesh&quot;,&quot;Ramesh&quot;,&quot;false&quot;,&quot;1&quot;"
+			doc:name="Validate That Users Inserted In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50r';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50r&quot;,&quot;984802&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50r&quot;,&quot;984803&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-NewUserWithSwipeCardTest"
+		description="Verifying functionality of inserting new user with swipe card into ODS"
+		>
+		<set-payload
+			value="#[getResource('PatchUsersRequests/newUserWithSwipeCard.json').asString()]"
+			doc:name="New User With Swipe Card Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50s" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT MASTER.EMPLOYEEID,MASTER.FULLNAME, MASTER.RECEIPTNAME, MASTER.IS_ACTIVE, MASTER.WORKGROUPID,CHILD.CARDNUMBER,CHILD.CARDEFFECTIVEFROM,CHILD.CARDEFFECTIVETO FROM USERS AS MASTER LEFT OUTER JOIN STORE_USER_SWIPE_CARDS AS CHILD ON MASTER.EMPLOYEEID=CHILD.EMPLOYEEID WHERE MASTER.EMPLOYEEID IN ('984804');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;,&quot;CARDNUMBER&quot;,&quot;CARDEFFECTIVEFROM&quot;,&quot;CARDEFFECTIVETO&quot;\n&quot;984804&quot;,&quot;MRS. Siva Chandra&quot;,&quot;Siva&quot;,&quot;true&quot;,&quot;2&quot;,&quot;984601&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;"
+			doc:name="Validate That Both User And Swipe Card Inserted In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50s';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50s&quot;,&quot;984804&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-NewUserWithSwipeCardsTest"
+		description="Verifying functionality of inserting new user without swipe cards into ODS"
+		>
+		<set-payload
+			value="#[getResource('PatchUsersRequests/newUserWithSwipeCards.json').asString()]"
+			doc:name="New User With Swipe Cards Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50t" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT MASTER.EMPLOYEEID,MASTER.FULLNAME, MASTER.RECEIPTNAME, MASTER.IS_ACTIVE, MASTER.WORKGROUPID,CHILD.CARDNUMBER,CHILD.CARDEFFECTIVEFROM,CHILD.CARDEFFECTIVETO FROM USERS AS MASTER LEFT OUTER JOIN STORE_USER_SWIPE_CARDS AS CHILD ON MASTER.EMPLOYEEID=CHILD.EMPLOYEEID WHERE MASTER.EMPLOYEEID IN ('984805');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;,&quot;CARDNUMBER&quot;,&quot;CARDEFFECTIVEFROM&quot;,&quot;CARDEFFECTIVETO&quot;\n&quot;984805&quot;,&quot;MISS Ghi Jkl&quot;,&quot;Ghi&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984602&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;\n&quot;984805&quot;,&quot;MISS Ghi Jkl&quot;,&quot;Ghi&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984603&quot;,&quot;03-Nov-2016 00:00:00&quot;,&quot;&quot;"
+			doc:name="Validate That Both User And Swipe Cards Inserted In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50t';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50t&quot;,&quot;984805&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-NewUsersWithSwipeCardsTest"
+		description="Verifying functionality of inserting new users with swipe cards into ODS"
+		>
+		<set-payload
+			value="#[getResource('PatchUsersRequests/newUsersWithSwipeCards.json').asString()]"
+			doc:name="New Users With Swipe Cards Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50u" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT MASTER.EMPLOYEEID,MASTER.FULLNAME, MASTER.RECEIPTNAME, MASTER.IS_ACTIVE, MASTER.WORKGROUPID,CHILD.CARDNUMBER,CHILD.CARDEFFECTIVEFROM,CHILD.CARDEFFECTIVETO FROM USERS AS MASTER LEFT OUTER JOIN STORE_USER_SWIPE_CARDS AS CHILD ON MASTER.EMPLOYEEID=CHILD.EMPLOYEEID WHERE MASTER.EMPLOYEEID IN ('984806','984807');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;,&quot;CARDNUMBER&quot;,&quot;CARDEFFECTIVEFROM&quot;,&quot;CARDEFFECTIVETO&quot;\n&quot;984806&quot;,&quot;MISS Ghi Jkl&quot;,&quot;Ghi&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984604&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;\n&quot;984806&quot;,&quot;MISS Ghi Jkl&quot;,&quot;Ghi&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984605&quot;,&quot;03-Nov-2016 00:00:00&quot;,&quot;&quot;\n&quot;984807&quot;,&quot;MR. Stu Vwx&quot;,&quot;Stu&quot;,&quot;false&quot;,&quot;1&quot;,&quot;984606&quot;,&quot;03-Nov-2016 00:00:00&quot;,&quot;&quot;\n&quot;984807&quot;,&quot;MR. Stu Vwx&quot;,&quot;Stu&quot;,&quot;false&quot;,&quot;1&quot;,&quot;984607&quot;,&quot;16-Feb-2016 00:00:00&quot;,&quot;25-Oct-2016 23:59:00&quot;"
+			doc:name="Validate That Both Users And Swipe Cards Inserted In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50u';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50u&quot;,&quot;984806&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50u&quot;,&quot;984807&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-ExistingUserTest"
+		description="Verifying functionality of updating existing user without swipe card into ODS"
+		>
+		<dbserver:execute config-ref="UpsertUsers_DB_Server"
+			sql="INSERT INTO USERS VALUES('984808','MRS. Siva Chandra','Siva','TRUE','2');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50b','984808');"
+			doc:name="New User Insertion" />
+		<set-payload
+			value="#[getResource('PatchUsersRequests/existingUser.json').asString()]"
+			doc:name="Existing User Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50c" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USERS WHERE EMPLOYEEID='984808';"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;\n&quot;984808&quot;,&quot;MRS. Ramesh&quot;,&quot;Ramesh&quot;,&quot;false&quot;,&quot;1&quot;"
+			doc:name="Validate That Existing User Updated In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50c';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50c&quot;,&quot;984808&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-ExistingUsersTest"
+		description="Verifying functionality of updating existing users without swipe card into ODS"
+		>
+		<dbserver:execute config-ref="UpsertUsers_DB_Server"
+			sql="INSERT INTO USERS VALUES('984809','MRS. Siva Chandra','Siva','TRUE','2');INSERT INTO USERS VALUES('984810','MRS. Ramesh','Ramesh','FALSE','1');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50d','984809');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50d','984810');"
+			doc:name="New Users Insertion" />
+		<set-payload
+			value="#[getResource('PatchUsersRequests/existingUsers.json').asString()]"
+			doc:name="Existing Users Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50e" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USERS WHERE EMPLOYEEID in('984809','984810');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;\n&quot;984809&quot;,&quot;MRS. Ramesh&quot;,&quot;Ramesh&quot;,&quot;false&quot;,&quot;1&quot;\n&quot;984810&quot;,&quot;MRS. Siva Chandra&quot;,&quot;Siva&quot;,&quot;true&quot;,&quot;2&quot;"
+			doc:name="Validate That Existing Users Updated In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50e';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50e&quot;,&quot;984809&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50e&quot;,&quot;984810&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-ExistingUserWithSwipeCardTest"
+		description="Verifying functionality of updating existing user with swipe card into ODS"
+		>
+		<dbserver:execute config-ref="UpsertUsers_DB_Server"
+			sql="INSERT INTO USERS VALUES('984811','MRS. Siva Chandra','Siva','TRUE','2');INSERT INTO STORE_USER_SWIPE_CARDS VALUES('984811','984608','2013-05-01 00:00:00','2016-11-02 23:59:00');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50f','984811');"
+			doc:name="New User With Swipe Card Insertion" />
+		<set-payload
+			value="#[getResource('PatchUsersRequests/existingUserWithSwipeCard.json').asString()]"
+			doc:name="Existing User With Swipe Card Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50g" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT MASTER.EMPLOYEEID,MASTER.FULLNAME, MASTER.RECEIPTNAME, MASTER.IS_ACTIVE, MASTER.WORKGROUPID,CHILD.CARDNUMBER,CHILD.CARDEFFECTIVEFROM,CHILD.CARDEFFECTIVETO FROM USERS AS MASTER LEFT OUTER JOIN STORE_USER_SWIPE_CARDS AS CHILD ON MASTER.EMPLOYEEID=CHILD.EMPLOYEEID WHERE MASTER.EMPLOYEEID IN ('984811');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;,&quot;CARDNUMBER&quot;,&quot;CARDEFFECTIVEFROM&quot;,&quot;CARDEFFECTIVETO&quot;\n&quot;984811&quot;,&quot;MISS Abc Def&quot;,&quot;Abc&quot;,&quot;true&quot;,&quot;1&quot;,&quot;984608&quot;,&quot;03-Nov-2016 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;"
+			doc:name="Validate That Both Existing User And Swipe Card Updated In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50g';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50g&quot;,&quot;984811&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-ExistingUserWithSwipeCardsTest"
+		description="Verifying functionality of updating existing user with swipe cards into ODS"
+		>
+		<dbserver:execute config-ref="UpsertUsers_DB_Server"
+			sql="INSERT INTO USERS VALUES('984812','MRS. Siva Chandra','Siva','TRUE','2');INSERT INTO STORE_USER_SWIPE_CARDS VALUES('984812','984609','2013-05-01 00:00:00','2016-11-02 23:59:00');INSERT INTO STORE_USER_SWIPE_CARDS VALUES('984812','984610','2016-11-02 23:59:00','2013-05-01 00:00:00');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50h','984812');"
+			doc:name="New User With Swipe Cards Insertion" />
+		<set-payload
+			value="#[getResource('PatchUsersRequests/existingUserWithSwipeCards.json').asString()]"
+			doc:name="Existing User With Swipe Cards Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50i" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT MASTER.EMPLOYEEID,MASTER.FULLNAME, MASTER.RECEIPTNAME, MASTER.IS_ACTIVE, MASTER.WORKGROUPID,CHILD.CARDNUMBER,CHILD.CARDEFFECTIVEFROM,CHILD.CARDEFFECTIVETO FROM USERS AS MASTER LEFT OUTER JOIN STORE_USER_SWIPE_CARDS AS CHILD ON MASTER.EMPLOYEEID=CHILD.EMPLOYEEID WHERE MASTER.EMPLOYEEID IN ('984812');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;,&quot;CARDNUMBER&quot;,&quot;CARDEFFECTIVEFROM&quot;,&quot;CARDEFFECTIVETO&quot;\n&quot;984812&quot;,&quot;MISS Ghi Jkl&quot;,&quot;Ghi&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984609&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;\n&quot;984812&quot;,&quot;MISS Ghi Jkl&quot;,&quot;Ghi&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984610&quot;,&quot;03-Nov-2011 00:00:00&quot;,&quot;02-Jan-2014 23:59:00&quot;"
+			doc:name="Validate That Both Existing User And Swipe Cards Updated In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50i';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50i&quot;,&quot;984812&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-ExistingUsersWithSwipeCardsTest"
+		description="Verifying functionality of updating existing users with swipes card into ODS"
+		>
+		<dbserver:execute config-ref="UpsertUsers_DB_Server"
+			sql="INSERT INTO USERS VALUES('984813','MRS. Siva Chandra','Siva','TRUE','2');INSERT INTO USERS VALUES('984814','MRS. Ramesh','Ramesh','TRUE','2');INSERT INTO STORE_USER_SWIPE_CARDS VALUES('984813','984611','2013-05-01 00:00:00','2016-11-02 23:59:00');INSERT INTO STORE_USER_SWIPE_CARDS VALUES('984813','984612','2016-11-02 23:59:00','2013-05-01 00:00:00');INSERT INTO STORE_USER_SWIPE_CARDS VALUES('984814','984613','2013-05-01 00:00:00','2016-11-02 23:59:00');INSERT INTO STORE_USER_SWIPE_CARDS VALUES('984814','984614','2016-11-02 23:59:00','2013-05-01 00:00:00');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50j','984813');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50j','984814');"
+			doc:name="New Users With Swipe Cards Insertion" />
+		<set-payload
+			value="#[getResource('PatchUsersRequests/existingUsersWithSwipeCards.json').asString()]"
+			doc:name="Existing Users With Swipe Cards Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50k" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT MASTER.EMPLOYEEID,MASTER.FULLNAME, MASTER.RECEIPTNAME, MASTER.IS_ACTIVE, MASTER.WORKGROUPID,CHILD.CARDNUMBER,CHILD.CARDEFFECTIVEFROM,CHILD.CARDEFFECTIVETO FROM USERS AS MASTER LEFT OUTER JOIN STORE_USER_SWIPE_CARDS AS CHILD ON MASTER.EMPLOYEEID=CHILD.EMPLOYEEID WHERE MASTER.EMPLOYEEID IN ('984813','984814');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;,&quot;CARDNUMBER&quot;,&quot;CARDEFFECTIVEFROM&quot;,&quot;CARDEFFECTIVETO&quot;\n&quot;984813&quot;,&quot;MISS Ghi Jkl&quot;,&quot;Ghi&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984611&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;\n&quot;984813&quot;,&quot;MISS Ghi Jkl&quot;,&quot;Ghi&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984612&quot;,&quot;03-Nov-2016 00:00:00&quot;,&quot;01-May-2013 00:00:00&quot;\n&quot;984814&quot;,&quot;MR. Stu Vwx&quot;,&quot;Stu&quot;,&quot;false&quot;,&quot;1&quot;,&quot;984613&quot;,&quot;03-Nov-2016 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;\n&quot;984814&quot;,&quot;MR. Stu Vwx&quot;,&quot;Stu&quot;,&quot;false&quot;,&quot;1&quot;,&quot;984614&quot;,&quot;16-Feb-2016 00:00:00&quot;,&quot;25-Oct-2016 23:59:00&quot;"
+			doc:name="Validate That Both Existing Users And Swipe Cards Updated In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50k';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50k&quot;,&quot;984813&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50k&quot;,&quot;984814&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-ExistingUserWithNewSwipeCardTest"
+		description="Verifying functionality of updating existing user and inserting new swipe card into ODS"
+		>
+		<dbserver:execute config-ref="UpsertUsers_DB_Server"
+			sql="INSERT INTO USERS VALUES('984815','MRS. Siva Chandra','Siva','TRUE','2');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50l','984815');"
+			doc:name="New User Insertion" />
+		<set-payload
+			value="#[getResource('PatchUsersRequests/existingUserWithNewSwipeCard.json').asString()]"
+			doc:name="Existing User With New Swipe Card Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50m" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT MASTER.EMPLOYEEID,MASTER.FULLNAME, MASTER.RECEIPTNAME, MASTER.IS_ACTIVE, MASTER.WORKGROUPID,CHILD.CARDNUMBER,CHILD.CARDEFFECTIVEFROM,CHILD.CARDEFFECTIVETO FROM USERS AS MASTER LEFT OUTER JOIN STORE_USER_SWIPE_CARDS AS CHILD ON MASTER.EMPLOYEEID=CHILD.EMPLOYEEID WHERE MASTER.EMPLOYEEID IN ('984815');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;,&quot;CARDNUMBER&quot;,&quot;CARDEFFECTIVEFROM&quot;,&quot;CARDEFFECTIVETO&quot;\n&quot;984815&quot;,&quot;MISS Ghi Jkl&quot;,&quot;Ghi&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984615&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;"
+			doc:name="Validate That Existing User Updated And New Swipe Card Inserted In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50m';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50m&quot;,&quot;984815&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-ExistingUserWithNewSwipeCardsTest"
+		description="Verifying functionality of updating existing user and inserting new swipe cards into ODS"
+		>
+		<dbserver:execute config-ref="UpsertUsers_DB_Server"
+			sql="INSERT INTO USERS VALUES('984816','MRS. Siva Chandra','Siva','TRUE','2');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50n','984816');"
+			doc:name="New User Insertion" />
+		<set-payload
+			value="#[getResource('PatchUsersRequests/existingUserWithNewSwipeCards.json').asString()]"
+			doc:name="Existing User With New Swipe Cards Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50o" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT MASTER.EMPLOYEEID,MASTER.FULLNAME, MASTER.RECEIPTNAME, MASTER.IS_ACTIVE, MASTER.WORKGROUPID,CHILD.CARDNUMBER,CHILD.CARDEFFECTIVEFROM,CHILD.CARDEFFECTIVETO FROM USERS AS MASTER LEFT OUTER JOIN STORE_USER_SWIPE_CARDS AS CHILD ON MASTER.EMPLOYEEID=CHILD.EMPLOYEEID WHERE MASTER.EMPLOYEEID IN ('984816');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;,&quot;CARDNUMBER&quot;,&quot;CARDEFFECTIVEFROM&quot;,&quot;CARDEFFECTIVETO&quot;\n&quot;984816&quot;,&quot;MISS Ghi Jkl&quot;,&quot;Ghi&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984616&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;\n&quot;984816&quot;,&quot;MISS Ghi Jkl&quot;,&quot;Ghi&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984617&quot;,&quot;01-May-2014 00:00:00&quot;,&quot;02-Nov-2017 23:59:00&quot;"
+			doc:name="Validate That Existing User Updated And New Swipe Cards Inserted In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50o';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50o&quot;,&quot;984816&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+	
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-ExistingUsersWithNewSwipeCardsTest"
+		description="Verifying functionality of updating existing users and inserting new swipe cards into ODS"
+		>
+		<dbserver:execute config-ref="UpsertUsers_DB_Server"
+			sql="INSERT INTO USERS VALUES('984819','MRS. Siva Chandra','Siva','TRUE','2');INSERT INTO USERS VALUES('984820','MRS. Ramesh','Ramesh','TRUE','2');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50y','984819');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50y','984820');"
+			doc:name="New Users Insertion" />
+		<set-payload
+			value="#[getResource('PatchUsersRequests/existingUsersWithNewSwipeCards.json').asString()]"
+			doc:name="Existing Users With New Swipe Cards Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50z"/>
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT MASTER.EMPLOYEEID,MASTER.FULLNAME, MASTER.RECEIPTNAME, MASTER.IS_ACTIVE, MASTER.WORKGROUPID,CHILD.CARDNUMBER,CHILD.CARDEFFECTIVEFROM,CHILD.CARDEFFECTIVETO FROM USERS AS MASTER LEFT OUTER JOIN STORE_USER_SWIPE_CARDS AS CHILD ON MASTER.EMPLOYEEID=CHILD.EMPLOYEEID WHERE MASTER.EMPLOYEEID IN ('984819','984820');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;,&quot;CARDNUMBER&quot;,&quot;CARDEFFECTIVEFROM&quot;,&quot;CARDEFFECTIVETO&quot;\n&quot;984819&quot;,&quot;MRS. Ramesh&quot;,&quot;Ramesh&quot;,&quot;true&quot;,&quot;5&quot;,&quot;984641&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;\n&quot;984819&quot;,&quot;MRS. Ramesh&quot;,&quot;Ramesh&quot;,&quot;true&quot;,&quot;5&quot;,&quot;984642&quot;,&quot;01-May-2014 00:00:00&quot;,&quot;02-Nov-2017 23:59:00&quot;\n&quot;984820&quot;,&quot;MRS. Siva Chandra&quot;,&quot;Siva&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984643&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;\n&quot;984820&quot;,&quot;MRS. Siva Chandra&quot;,&quot;Siva&quot;,&quot;true&quot;,&quot;6&quot;,&quot;984644&quot;,&quot;01-May-2014 00:00:00&quot;,&quot;02-Nov-2017 23:59:00&quot;"
+			doc:name="Validate That Existing Users Updated And New Swipe Cards Inserted In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50z';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50z&quot;,&quot;984819&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50z&quot;,&quot;984820&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-204-application/json-ExistingUsersWithExistingAndNewSwipeCardsTest"
+		description="Verifying functionality of updating existing users &amp; swipe cards and inserting new swipe cards into ODS"
+		>
+		<dbserver:execute config-ref="UpsertUsers_DB_Server"
+			sql="INSERT INTO USERS VALUES('984817','MRS. Siva Chandra','Siva','TRUE','2');INSERT INTO USERS VALUES('984818','MRS. Ramesh','Ramesh','FALSE','1');INSERT INTO STORE_USER_SWIPE_CARDS VALUES('984817','984618','2013-05-01 00:00:00','2016-11-02 23:59:00');INSERT INTO STORE_USER_SWIPE_CARDS VALUES('984817','984619','2013-05-01 00:00:00','2016-11-02 23:59:00');INSERT INTO STORE_USER_SWIPE_CARDS VALUES('984818','984620','2013-05-01 00:00:00','2016-11-02 23:59:00');INSERT INTO STORE_USER_SWIPE_CARDS VALUES('984818','984621','2013-05-01 00:00:00','2016-11-02 23:59:00');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50p','984817');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50p','984818');"
+			doc:name="New Users With Swipe Cards Insertion" />
+		<set-payload
+			value="#[getResource('PatchUsersRequests/existingUsersWithExistingAndNewSwipeCards.json').asString()]"
+			doc:name="Existing Users With Existing And New Swipe Cards Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50q" />
+			</http:request-builder>
+		</http:request>
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(204))]"
+			doc:name="Assert That - http.status eq 204" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT MASTER.EMPLOYEEID,MASTER.FULLNAME, MASTER.RECEIPTNAME, MASTER.IS_ACTIVE, MASTER.WORKGROUPID,CHILD.CARDNUMBER,CHILD.CARDEFFECTIVEFROM,CHILD.CARDEFFECTIVETO FROM USERS AS MASTER LEFT OUTER JOIN STORE_USER_SWIPE_CARDS AS CHILD ON MASTER.EMPLOYEEID=CHILD.EMPLOYEEID WHERE MASTER.EMPLOYEEID IN ('984817','984818');"
+			returns="&quot;EMPLOYEEID&quot;,&quot;FULLNAME&quot;,&quot;RECEIPTNAME&quot;,&quot;IS_ACTIVE&quot;,&quot;WORKGROUPID&quot;,&quot;CARDNUMBER&quot;,&quot;CARDEFFECTIVEFROM&quot;,&quot;CARDEFFECTIVETO&quot;\n&quot;984817&quot;,&quot;MRS. Siva Chandra&quot;,&quot;Siva&quot;,&quot;true&quot;,&quot;1&quot;,&quot;984618&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;\n&quot;984817&quot;,&quot;MRS. Siva Chandra&quot;,&quot;Siva&quot;,&quot;true&quot;,&quot;1&quot;,&quot;984619&quot;,&quot;01-May-2014 00:00:00&quot;,&quot;02-Nov-2017 23:59:00&quot;\n&quot;984817&quot;,&quot;MRS. Siva Chandra&quot;,&quot;Siva&quot;,&quot;true&quot;,&quot;1&quot;,&quot;984622&quot;,&quot;01-May-2012 00:00:00&quot;,&quot;02-Nov-2015 23:59:00&quot;\n&quot;984817&quot;,&quot;MRS. Siva Chandra&quot;,&quot;Siva&quot;,&quot;true&quot;,&quot;1&quot;,&quot;984623&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2018 23:59:00&quot;\n&quot;984818&quot;,&quot;MRS. Ramesh&quot;,&quot;Ramesh&quot;,&quot;false&quot;,&quot;2&quot;,&quot;984620&quot;,&quot;01-May-2011 00:00:00&quot;,&quot;02-Nov-2016 23:59:00&quot;\n&quot;984818&quot;,&quot;MRS. Ramesh&quot;,&quot;Ramesh&quot;,&quot;false&quot;,&quot;2&quot;,&quot;984621&quot;,&quot;01-May-2012 00:00:00&quot;,&quot;02-Nov-2013 23:59:00&quot;\n&quot;984818&quot;,&quot;MRS. Ramesh&quot;,&quot;Ramesh&quot;,&quot;false&quot;,&quot;2&quot;,&quot;984624&quot;,&quot;01-May-2013 00:00:00&quot;,&quot;02-Nov-2014 23:59:00&quot;\n&quot;984818&quot;,&quot;MRS. Ramesh&quot;,&quot;Ramesh&quot;,&quot;false&quot;,&quot;2&quot;,&quot;984625&quot;,&quot;01-May-2015 00:00:00&quot;,&quot;02-Nov-2017 23:59:00&quot;"
+			doc:name="Validate That Existing Users &amp; Swipe cards Updated And New Swipe Cards Inserted In DB" />
+		<dbserver:validate-that config-ref="UpsertUsers_DB_Server"
+			query="SELECT * FROM USER_CHANGE_AUDIT WHERE CHANGE_ID='1898d846-c93c-11e7-abc4-cec278b6b50q';"
+			returns="&quot;CHANGE_ID&quot;,&quot;EMPLOYEEID&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50q&quot;,&quot;984817&quot;\n&quot;1898d846-c93c-11e7-abc4-cec278b6b50q&quot;,&quot;984818&quot;"
+			doc:name="Validating That The Given ChangeId Inserted In DB" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-400-application/json-BadRequestTest"
+		description="Verifying functionality of bad request (request with status as 'active' insted of 'Active')"
+		>
+		<set-payload
+			value="#[getResource('PatchUsersRequests/badRequest.json').asString()]"
+			doc:name="Bad Request (Request With Status as 'active')" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50q"/>
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="400" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response    to string" />
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(400))]"
+			doc:name="Assert That - http.status eq 400" />
+		<munit:assert-on-equals
+			message="The message in error response payload is not correct!"
+			expectedValue="#['Bad Request']" actualValue="#[json:message]"
+			doc:name="Assert that - message is as expected" />
+		<munit:assert-on-equals
+			message="The errorDetails in error response payload is not correct!"
+			expectedValue="#['Error validating JSON. Error: - Invalid element active. (org.mule.module.apikit.exception.BadRequestException).']"
+			actualValue="#[json:errorDetails]" doc:name="Assert that -  errorDetails is as expected" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-400-application/json-MissingMandiatoryFieldsTest"
+		description="Verifying functionality of missing mandiatory fields (request without employeeid and cardnumber)" >
+		<set-payload
+			value="#[getResource('PatchUsersRequests/missingMandiatoryFields.json').asString()]"
+			doc:name="Missing Mandiatory Fields (EmployeeID, CardNumber) Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50q"/>
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="400" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response    to string" />
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(400))]"
+			doc:name="Assert That - http.status eq 400" />
+		<munit:assert-on-equals
+			message="The message in error response payload is not correct!"
+			expectedValue="#['Bad Request']" actualValue="#[json:message]"
+			doc:name="Assert that - message is as expected" />
+		<munit:assert-on-equals
+			message="The errorDetails in error response payload is not correct!"
+			expectedValue="#['Error validating JSON. Error: - Missing required field \&quot;cardNumber\&quot;\n- Missing required field \&quot;employeeID\&quot; (org.mule.module.apikit.exception.BadRequestException).']"
+			actualValue="#[json:errorDetails]" doc:name="Assert that -  errorDetails is as expected" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-404-application/json-ResourceNotFoundTest"
+		description="Verifying functionality of calling PATCH Users with invalid URL" >
+		<set-payload
+			value="#[getResource('PatchUsersRequests/newUser.json').asString()]"
+			doc:name="New User Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeuserss" doc:name="HTTP">
+			<http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50q"/>
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="404" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response    to string" />
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(404))]"
+			doc:name="Assert That - http.status eq 404" />
+		<munit:assert-on-equals
+			message="The message in error response payload is not correct!"
+			expectedValue="#['Resource Not Found']" actualValue="#[json:message]"
+			doc:name="Assert that - message is as expected" />
+	</munit:test>
+
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-405-application/json-MethodNotAllowedTest"
+		description="Verifying functionality of calling PATCH Users with invalid method POST insted of PATCH" >
+		<set-payload
+			value="#[getResource('PatchUsersRequests/newUser.json').asString()]"
+			doc:name="New User Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="POST" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50q"/>
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="405" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response    to string" />
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(405))]"
+			doc:name="Assert That - http.status eq 405" />
+		<munit:assert-on-equals
+			message="The message in error response payload is not correct!"
+			expectedValue="#['Method Not Allowed']" actualValue="#[json:message]"
+			doc:name="Assert that - message is as expected" />
+	</munit:test>
+	
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-415-application/json-UnsupportedMediaTypeTest"
+		description="Verifying functionality of invalid header ContentType application/xml insted of application/json" >
+		<set-payload
+			value="#[getResource('PatchUsersRequests/newUser.json').asString()]"
+			doc:name="New User Request Payload" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:header headerName="Content-Type" value="application/xml"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50q"/>
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="415" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response    to string" />
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(415))]"
+			doc:name="Assert That - http.status eq 415" />
+		<munit:assert-on-equals
+			message="The message in error response payload is not correct!"
+			expectedValue="#['Unsupported Media Type']" actualValue="#[json:message]"
+			doc:name="Assert that - message is as expected" />
+	</munit:test>
+	
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-500-application/json-DataweaveExceptionTest"
+		description="Verifying functionality of passing invalid date format of cardEffectiveFrom in the input request" >
+		<set-payload
+			value="#[getResource('PatchUsersRequests/invalidRequest.json').asString()]"
+			doc:name="Invalid Request (Request with invalid date format of cardEffectiveFrom)" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50q"/>
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="500" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response    to string" />
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(500))]"
+			doc:name="Assert That - http.status eq 500" />
+		<munit:assert-on-equals
+			message="The message in error response payload is not correct!"
+			expectedValue="#['The application has encountered an unknown error. It doesn\'t appear to have affected your data, but our technical staff have been automatically notified and will be looking into this.']" actualValue="#[json:message]"
+			doc:name="Assert that - message is as expected" />
+	</munit:test>
+	
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-500-application/json-SQLExceptionTest"
+		description="Verifying functionality of passing duplicate changeId (X-Correlation-Id) in the headers" >
+        <dbserver:execute config-ref="UpsertUsers_DB_Server" sql="INSERT INTO USERS VALUES('984831','MRS. Siva Chandra','Siva','TRUE','2');INSERT INTO USER_CHANGE_AUDIT VALUES('1898d846-c93c-11e7-abc4-cec278b6b50p','984831');" doc:name="New User Insertion"/>
+		<set-payload
+			value="#[getResource('PatchUsersRequests/userWithDuplicateTransactionID.json').asString()]"
+			doc:name="Existing User Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50p"/>
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="500" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response    to string" />
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(500))]"
+			doc:name="Assert That - http.status eq 500" />
+		<munit:assert-on-equals
+			message="The message in error response payload is not correct!"
+			expectedValue="#['The application has encountered an unknown error. It doesn\'t appear to have affected your data, but our technical staff have been automatically notified and will be looking into this.']" actualValue="#[json:message]"
+			doc:name="Assert that - message is as expected" />
+	</munit:test>
+	
+	<munit:test
+		name="patch:/users/storeusers:users-api-config-500-application/json-DBDownTest"
+		description="Verifying functionality of DB down" >
+        <dbserver:stop-db-server config-ref="UpsertUsers_DB_Server"  doc:name="Stop DB Server"/>
+		<set-payload
+			value="#[getResource('PatchUsersRequests/newUser.json').asString()]"
+			doc:name="Existing User Request" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="PATCH" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50p"/>
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="500" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response    to string" />
+
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(500))]"
+			doc:name="Assert That - http.status eq 500" />
+		<munit:assert-on-equals
+			message="The message in error response payload is not correct!"
+			expectedValue="#['The application has encountered an unknown error. It doesn\'t appear to have affected your data, but our technical staff have been automatically notified and will be looking into this.']" actualValue="#[json:message]"
+			doc:name="Assert that - message is as expected" />
+	</munit:test>
+	
+	<munit:after-suite name="upsert-users-functionaltest-suteAfter_Suite"
+		description="Ater suite actions">
+		<dbserver:stop-db-server config-ref="UpsertUsers_DB_Server"
+			doc:name="Stop DB Server" />
+	</munit:after-suite>
+</mule>

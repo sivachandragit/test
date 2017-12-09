@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:mock="http://www.mulesoft.org/schema/mule/mock" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/mock/current/mule-mock.xsd">
+	<munit:config name="munit" doc:name="MUnit configuration"
+		mock-connectors="false" mock-inbounds="false" />
+	<spring:beans>
+		<spring:import resource="classpath:inbound/users-api.xml" />
+		<spring:import resource="classpath:common/error-handling.xml" />
+		<spring:import resource="classpath:services/get-users.xml" />
+		<spring:import resource="classpath:common/global.xml" />
+		<spring:import resource="classpath:services/upsert-users.xml" />
+		<spring:import resource="classpath:outbound/ods.xml" />
+	</spring:beans>
+	<munit:test name="get-users-unittest-suite-get-users-GetAllUsersTest"
+		description="Verifying functionality of pulling all users from ODS">
+
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users Count">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users Count']" />
+			</mock:with-attributes>
+			<mock:then-return payload="#[[{&quot;count&quot;:&quot;10&quot;}]]" />
+		</mock:when>
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users']" />
+			</mock:with-attributes>
+			<mock:then-return
+				payload="#[[{&quot;EMPLOYEEID&quot;:&quot;009223&quot;,&quot;FULLNAME&quot;:&quot;MRS. Siva&quot;,&quot;RECEIPTNAME&quot;:&quot;Siva&quot;,&quot;IS_ACTIVE&quot;:true,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null},{&quot;EMPLOYEEID&quot;:&quot;0092232&quot;,&quot;FULLNAME&quot;:&quot;MRS. Chandra&quot;,&quot;RECEIPTNAME&quot;:&quot;Chandra&quot;,&quot;IS_ACTIVE&quot;:true,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:&quot;00450665&quot;,&quot;CARDEFFECTIVEFROM&quot;:java.sql.Timestamp.valueOf(&quot;2013-05-01 00:00:00.0&quot;),&quot;CARDEFFECTIVETO&quot;:java.sql.Timestamp.valueOf(&quot;2016-11-02 23:59:00.0&quot;)}]]" />
+		</mock:when>
+		<munit:set payload="#[]" doc:name="Setting Query Params">
+			<munit:inbound-properties>
+				<munit:inbound-property key="http.query.params"
+					value="#[['startrecord': '1','endrecord':'2']]" />
+			</munit:inbound-properties>
+		</munit:set>
+		<flow-ref name="get-users-request-prepration-Sub_Flow"
+			doc:name="get-users-request-prepration-Sub_Flow_Call" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageOutboundProperty('Total-Records').is(eq(&quot;10&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllUsers.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+
+	<munit:test name="get-users-unittest-suite-get-users-GetAllActiveUsersTest"
+		description="Verifying functionality of pulling all active users from ODS">
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users Count">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users Count']" />
+			</mock:with-attributes>
+			<mock:then-return payload="#[[{&quot;count&quot;:&quot;5&quot;}]]" />
+		</mock:when>
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users']" />
+			</mock:with-attributes>
+			<mock:then-return
+				payload="#[[{&quot;EMPLOYEEID&quot;:&quot;009223&quot;,&quot;FULLNAME&quot;:&quot;MRS. Siva&quot;,&quot;RECEIPTNAME&quot;:&quot;Siva&quot;,&quot;IS_ACTIVE&quot;:true,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null},{&quot;EMPLOYEEID&quot;:&quot;0092232&quot;,&quot;FULLNAME&quot;:&quot;MRS. Chandra&quot;,&quot;RECEIPTNAME&quot;:&quot;Chandra&quot;,&quot;IS_ACTIVE&quot;:true,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:&quot;00450665&quot;,&quot;CARDEFFECTIVEFROM&quot;:java.sql.Timestamp.valueOf(&quot;2013-05-01 00:00:00.0&quot;),&quot;CARDEFFECTIVETO&quot;:java.sql.Timestamp.valueOf(&quot;2016-11-02 23:59:00.0&quot;)}]]" />
+		</mock:when>
+		<munit:set payload="#[]" doc:name="Setting Query Params">
+			<munit:inbound-properties>
+				<munit:inbound-property key="http.query.params"
+					value="#[['startrecord': '1','endrecord':'2','status':'Active']]" />
+			</munit:inbound-properties>
+		</munit:set>
+		<flow-ref name="get-users-request-prepration-Sub_Flow"
+			doc:name="get-users-request-prepration-Sub_Flow_Call" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageOutboundProperty('Total-Records').is(eq(&quot;5&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllActiveUsers.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+
+	<munit:test
+		name="get-users-unittest-suite-get-users-GetAllInactiveUsersTest"
+		description="Verifying functionality of pulling all inactive users from ODS">
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users Count">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users Count']" />
+			</mock:with-attributes>
+			<mock:then-return payload="#[[{&quot;count&quot;:&quot;5&quot;}]]" />
+		</mock:when>
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users']" />
+			</mock:with-attributes>
+			<mock:then-return
+				payload="#[[{&quot;EMPLOYEEID&quot;:&quot;0123457&quot;,&quot;FULLNAME&quot;:&quot;MRS. Rajesh&quot;,&quot;RECEIPTNAME&quot;:&quot;Rajesh&quot;,&quot;IS_ACTIVE&quot;:false,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null},{&quot;EMPLOYEEID&quot;:&quot;0123456&quot;,&quot;FULLNAME&quot;:&quot;MRS. Satesh&quot;,&quot;RECEIPTNAME&quot;:&quot;Rajesh&quot;,&quot;IS_ACTIVE&quot;:false,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:&quot;00546376&quot;,&quot;CARDEFFECTIVEFROM&quot;:java.sql.Timestamp.valueOf(&quot;2016-02-16 00:00:00.0&quot;),&quot;CARDEFFECTIVETO&quot;:java.sql.Timestamp.valueOf(&quot;2016-10-25 23:59:00.0&quot;)},{&quot;EMPLOYEEID&quot;:&quot;0123456&quot;,&quot;FULLNAME&quot;:&quot;MRS. Satesh&quot;,&quot;RECEIPTNAME&quot;:&quot;Rajesh&quot;,&quot;IS_ACTIVE&quot;:false,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:&quot;00556300&quot;,&quot;CARDEFFECTIVEFROM&quot;:java.sql.Timestamp.valueOf(&quot;2016-11-03 00:00:00.0&quot;),&quot;CARDEFFECTIVETO&quot;:java.sql.Timestamp.valueOf(&quot;2017-11-20 16:20:00.0&quot;)}]]" />
+		</mock:when>
+		<munit:set payload="#[]" doc:name="Setting Query Params">
+			<munit:inbound-properties>
+				<munit:inbound-property key="http.query.params"
+					value="#[['startrecord': '1','endrecord':'2','status':'Inactive']]" />
+			</munit:inbound-properties>
+		</munit:set>
+		<flow-ref name="get-users-request-prepration-Sub_Flow"
+			doc:name="get-users-request-prepration-Sub_Flow_Call" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageOutboundProperty('Total-Records').is(eq(&quot;5&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllInactiveUsers.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+
+	<munit:test
+		name="get-users-unittest-suite-get-users-GetAllActiveUsersBasedOnChangeIdTest"
+		description="Verifying functionality of pulling all active users from ODS based on given changeid ">
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users Count">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users Count']" />
+			</mock:with-attributes>
+			<mock:then-return payload="#[[{&quot;count&quot;:&quot;5&quot;}]]" />
+		</mock:when>
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users']" />
+			</mock:with-attributes>
+			<mock:then-return
+				payload="#[[{&quot;EMPLOYEEID&quot;:&quot;009223&quot;,&quot;FULLNAME&quot;:&quot;MRS. Siva&quot;,&quot;RECEIPTNAME&quot;:&quot;Siva&quot;,&quot;IS_ACTIVE&quot;:true,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null},{&quot;EMPLOYEEID&quot;:&quot;0092232&quot;,&quot;FULLNAME&quot;:&quot;MRS. Chandra&quot;,&quot;RECEIPTNAME&quot;:&quot;Chandra&quot;,&quot;IS_ACTIVE&quot;:true,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:&quot;00450665&quot;,&quot;CARDEFFECTIVEFROM&quot;:java.sql.Timestamp.valueOf(&quot;2013-05-01 00:00:00.0&quot;),&quot;CARDEFFECTIVETO&quot;:java.sql.Timestamp.valueOf(&quot;2016-11-02 23:59:00.0&quot;)}]]" />
+		</mock:when>
+		<munit:set payload="#[]" doc:name="Setting Query Params">
+			<munit:inbound-properties>
+				<munit:inbound-property key="http.query.params"
+					value="#[['startrecord': '1','endrecord':'2','status':'Active', 'changeid':'1898d846-c93c-11e7-abc4-cec278b6b50a']]" />
+			</munit:inbound-properties>
+		</munit:set>
+		<flow-ref name="get-users-request-prepration-Sub_Flow"
+			doc:name="get-users-request-prepration-Sub_Flow_Call" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageOutboundProperty('Total-Records').is(eq(&quot;5&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllActiveUsersBasedOnChangeId.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+
+	<munit:test
+		name="get-users-unittest-suite-get-users-GetAllInactiveUsersBasedOnChangeIdTest"
+		description="Verifying functionality of pulling all inactive users from ODS based on given changeid ">
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users Count">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users Count']" />
+			</mock:with-attributes>
+			<mock:then-return payload="#[[{&quot;count&quot;:&quot;5&quot;}]]" />
+		</mock:when>
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users']" />
+			</mock:with-attributes>
+			<mock:then-return
+				payload="#[[{&quot;EMPLOYEEID&quot;:&quot;0123457&quot;,&quot;FULLNAME&quot;:&quot;MRS. Rajesh&quot;,&quot;RECEIPTNAME&quot;:&quot;Rajesh&quot;,&quot;IS_ACTIVE&quot;:false,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null},{&quot;EMPLOYEEID&quot;:&quot;0123456&quot;,&quot;FULLNAME&quot;:&quot;MRS. Satesh&quot;,&quot;RECEIPTNAME&quot;:&quot;Rajesh&quot;,&quot;IS_ACTIVE&quot;:false,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:&quot;00546376&quot;,&quot;CARDEFFECTIVEFROM&quot;:java.sql.Timestamp.valueOf(&quot;2016-02-16 00:00:00.0&quot;),&quot;CARDEFFECTIVETO&quot;:java.sql.Timestamp.valueOf(&quot;2016-10-25 23:59:00.0&quot;)},{&quot;EMPLOYEEID&quot;:&quot;0123456&quot;,&quot;FULLNAME&quot;:&quot;MRS. Satesh&quot;,&quot;RECEIPTNAME&quot;:&quot;Rajesh&quot;,&quot;IS_ACTIVE&quot;:false,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:&quot;00556300&quot;,&quot;CARDEFFECTIVEFROM&quot;:java.sql.Timestamp.valueOf(&quot;2016-11-03 00:00:00.0&quot;),&quot;CARDEFFECTIVETO&quot;:java.sql.Timestamp.valueOf(&quot;2017-11-20 16:20:00.0&quot;)}]]" />
+		</mock:when>
+		<munit:set payload="#[]" doc:name="Setting Query Params">
+			<munit:inbound-properties>
+				<munit:inbound-property key="http.query.params"
+					value="#[['startrecord': '1','endrecord':'2','status':'Inactive', 'changeid':'1898d846-c93c-11e7-abc4-cec278b6b50a']]" />
+			</munit:inbound-properties>
+		</munit:set>
+		<flow-ref name="get-users-request-prepration-Sub_Flow"
+			doc:name="get-users-request-prepration-Sub_Flow_Call" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageOutboundProperty('Total-Records').is(eq(&quot;5&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllInactiveUsersBasedOnChangeId.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+
+	<munit:test
+		name="get-users-unittest-suite-get-users-GetAllUsersBasedOnChangeIdTest"
+		description="Verifying functionality of pulling all users from ODS based on given changeid ">
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users Count">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users Count']" />
+			</mock:with-attributes>
+			<mock:then-return payload="#[[{&quot;count&quot;:&quot;10&quot;}]]" />
+		</mock:when>
+		<mock:when messageProcessor=".*:.*" doc:name="Mock Get Users">
+			<mock:with-attributes>
+				<mock:with-attribute name="doc:name" whereValue="#['Get Users']" />
+			</mock:with-attributes>
+			<mock:then-return
+				payload="#[[{&quot;EMPLOYEEID&quot;:&quot;009223&quot;,&quot;FULLNAME&quot;:&quot;MRS. Siva&quot;,&quot;RECEIPTNAME&quot;:&quot;Siva&quot;,&quot;IS_ACTIVE&quot;:true,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null},{&quot;EMPLOYEEID&quot;:&quot;0092232&quot;,&quot;FULLNAME&quot;:&quot;MRS. Chandra&quot;,&quot;RECEIPTNAME&quot;:&quot;Chandra&quot;,&quot;IS_ACTIVE&quot;:true,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:&quot;00450665&quot;,&quot;CARDEFFECTIVEFROM&quot;:java.sql.Timestamp.valueOf(&quot;2013-05-01 00:00:00.0&quot;),&quot;CARDEFFECTIVETO&quot;:java.sql.Timestamp.valueOf(&quot;2016-11-02 23:59:00.0&quot;)}]]" />
+		</mock:when>
+		<munit:set payload="#[]" doc:name="Setting Query Params">
+			<munit:inbound-properties>
+				<munit:inbound-property key="http.query.params"
+					value="#[['startrecord': '1','endrecord':'3', 'changeid':'1898d846-c93c-11e7-abc4-cec278b6b50a']]" />
+			</munit:inbound-properties>
+		</munit:set>
+		<flow-ref name="get-users-request-prepration-Sub_Flow"
+			doc:name="get-users-request-prepration-Sub_Flow_Call" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageOutboundProperty('Total-Records').is(eq(&quot;10&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllUsersBasedOnChangeId.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+</mule>

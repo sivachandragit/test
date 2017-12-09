@@ -1,0 +1,78 @@
+#%RAML 1.0
+title: EPOS Users API
+version: v1
+#baseUri: https://dev.api.hof.com/epos/example-api/{version}/
+#baseUri: https://mocksvc.mulesoft.com/mocks/279dc34c-7786-4bf3-a1c7-03b9ddf23e9d/api/project-name/{version}/
+baseUri: https://mocksvc.mulesoft.com/mocks/136c69da-3ded-40b5-b6d1-13280d27d648
+protocols: [ HTTPS ]
+
+types:
+  user: !include types/user.raml
+  users: !include types/users.raml
+  errorResponse: !include types/errorResponse.raml
+
+traits:
+  pageable: !include traits/pageable.raml
+  traceable: !include traits/traceable.raml
+
+/users:
+  /storeusers:
+    displayName: Users
+    description: A collection of users.
+    is: [ traceable ]
+    patch:
+      description: Takes a delta of user updates and passes them through to ODS.
+      body:
+        application/json:
+            type: users
+      responses:
+        204:
+        400:
+          body: 
+            application/json:
+              type: errorResponse
+              example:
+                message: 400 - Unable to upsert users
+                errorDetail: Field employeeid was not passed.
+                transactionID: "585"
+                messageID: "974"
+                timestamp: 2017-10-26T16:24:31.475+01:00
+        500:
+          body: 
+            application/json:
+              type: errorResponse
+              example:
+                message: 500 - Unable to upsert users
+                errorDetail: Can't connect to ODS.
+                transactionID: "585"
+                messageID: "974"
+                timestamp: 2017-10-26T16:24:31.475+01:00
+    get:
+      is: [ pageable ]
+      description: Takes the delta of users and passes them through to Enacta.
+      responses: 
+        200:
+          body: 
+            application/json:
+              type: users
+              example:  !include examples/getUsers.json
+        400:
+          body: 
+            application/json:
+              type: errorResponse
+              example:
+                message: 400 - Unable to get the users
+                errorDetail: Queryparm startrecord was not passed.
+                transactionID: "585"
+                messageID: "974"
+                timestamp: 2017-10-26T16:24:31.475+01:00
+        500:
+          body: 
+            application/json:
+              type: errorResponse
+              example:
+                message: 500 - Unable to get the users
+                errorDetail: Can't connect to ODS.
+                transactionID: "585"
+                messageID: "974"
+                timestamp: 2017-10-26T16:24:31.475+01:00

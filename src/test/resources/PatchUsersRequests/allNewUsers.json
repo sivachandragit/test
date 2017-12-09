@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "employeeID": "009223",
+      "fullName": "MRS. Jacqueline Ciandella",
+      "receiptName": "JACQUELINE",
+      "accessPassword": "0223",
+      "dateOfBirth": "1963/05/16",
+      "status": "Active",
+      "workGroupID": "2"
+    },
+    {
+      "employeeID": "506742",
+      "fullName": "MISS Grace Curtis",
+      "receiptName": "Grace",
+      "accessPassword": "1234",
+      "dateOfBirth": "1999/09/04",
+      "status": "Active",
+      "swipeCards": [
+        {
+          "cardNumber": "00563818",
+          "cardEffectiveFrom": "2016/11/03 00:00"
+        }
+      ],
+      "workGroupID": "1"
+    }
+  ]
+}

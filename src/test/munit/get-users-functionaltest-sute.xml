@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:dbserver="http://www.mulesoft.org/schema/mule/dbserver"
+	xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mock="http://www.mulesoft.org/schema/mule/mock"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/mock/current/mule-mock.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/dbserver http://www.mulesoft.org/schema/mule/dbserver/current/mule-dbserver.xsd">
+	<spring:beans>
+		<spring:import resource="classpath:inbound/users-api.xml" />
+		<spring:import resource="classpath:common/error-handling.xml" />
+		<spring:import resource="classpath:services/get-users.xml" />
+		<spring:import resource="classpath:common/global.xml" />
+		<spring:import resource="classpath:services/upsert-users.xml" />
+		<spring:import resource="classpath:outbound/ods.xml" />
+	</spring:beans>
+	<munit:config mock-connectors="false" mock-inbounds="false"
+		doc:name="MUnit configuration" />
+	<http:request-config name="HTTP_Request_Configuration"
+		host="localhost" port="8081" basePath="/api" doc:name="HTTP Request Configuration"
+		responseTimeout="3000000" />
+	<dbserver:config name="GetUser_DB_Server" database="MyDB"
+		sqlFile="InMemoryDBScripts/GetUsers.sql" connectionStringParameters="MODE=MySQL"
+		doc:name="DB Server" />
+	<munit:before-suite name="get-users-functionaltestBefore_Suite"
+		description="get-users-functionaltestBefore_Suite">
+		<dbserver:start-db-server config-ref="GetUser_DB_Server"
+			doc:name="Start DB Server" />
+	</munit:before-suite>
+	<munit:test
+		name="get:/users/storeusers:users-api-config-200-application/json-GetAllUsersTest"
+		description="Verifying functionality of pulling all users from ODS">
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="GET" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:query-param paramName="startrecord" value="#['1']"/>
+                <http:query-param paramName="endrecord" value="#['2']"/>
+                <http:header headerName="Accept" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50a"/>
+
+			</http:request-builder>
+		</http:request>
+		<object-to-string-transformer doc:name="http response to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(200))]"
+			doc:name="Assert That - http.status eq 200" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageInboundProperty('total-records').is(eq(&quot;10&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllUsers.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+
+	<munit:test
+		name="get:/users/storeusers:users-api-config-200-application/json-GetAllActiveUsersTest"
+		description="Verifying functionality of pulling all active users from ODS">
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="GET" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:query-param paramName="startrecord" value="#['1']"/>
+                <http:query-param paramName="endrecord" value="#['2']"/>
+                <http:query-param paramName="status" value="#['Active']"/>
+                <http:header headerName="Accept" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50a"/>
+			</http:request-builder>
+		</http:request>
+		<object-to-string-transformer doc:name="http response to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(200))]"
+			doc:name="Assert That - http.status eq 200" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageInboundProperty('total-records').is(eq(&quot;5&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllActiveUsers.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+
+	<munit:test
+		name="get:/users/storeusers:users-api-config-200-application/json-GetAllInactiveUsersTest"
+		description="Verifying functionality of pulling all inactive users from ODS">
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="GET" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:query-param paramName="startrecord" value="#['1']" />
+				<http:query-param paramName="endrecord" value="#['2']" />
+				<http:query-param paramName="status" value="#['Inactive']" />
+				<http:header headerName="Accept" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50a" />
+			</http:request-builder>
+		</http:request>
+		<object-to-string-transformer doc:name="http response to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(200))]"
+			doc:name="Assert That - http.status eq 200" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageInboundProperty('total-records').is(eq(&quot;5&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllInactiveUsers.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+
+	<munit:test
+		name="get:/users/storeusers:users-api-config-200-application/json-GetAllActiveUsersBasedOnChangeIdTest"
+		description="Verifying functionality of pulling all active users from ODS based on given changeid ">
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="GET" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:query-param paramName="startrecord" value="#['1']" />
+				<http:query-param paramName="endrecord" value="#['2']" />
+				<http:query-param paramName="status" value="#['Active']" />
+				<http:query-param paramName="changeid"
+					value="#['1898d846-c93c-11e7-abc4-cec278b6b50a']" />
+				<http:header headerName="Accept" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50a" />
+			</http:request-builder>
+		</http:request>
+		<object-to-string-transformer doc:name="http response to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(200))]"
+			doc:name="Assert That - http.status eq 200" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageInboundProperty('total-records').is(eq(&quot;5&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllActiveUsersBasedOnChangeId.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+
+	<munit:test
+		name="get:/users/storeusers:users-api-config-200-application/json-GetAllInactiveUsersBasedOnChangeIdTest"
+		description="Verifying functionality of pulling all inactive users from ODS based on given changeid ">
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="GET" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:query-param paramName="startrecord" value="#['1']" />
+				<http:query-param paramName="endrecord" value="#['2']" />
+				<http:query-param paramName="status" value="#['Inactive']" />
+				<http:query-param paramName="changeid"
+					value="#['1898d846-c93c-11e7-abc4-cec278b6b50a']" />
+				<http:header headerName="Accept" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50a" />
+
+			</http:request-builder>
+		</http:request>
+		<object-to-string-transformer doc:name="http response to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(200))]"
+			doc:name="Assert That - http.status eq 200" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageInboundProperty('total-records').is(eq(&quot;5&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllInactiveUsersBasedOnChangeId.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+
+	<munit:test
+		name="get:/users/storeusers:users-api-config-200-application/json-GetAllUsersBasedOnChangeIdTest"
+		description="Verifying functionality of pulling all users from ODS based on given changeid ">
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="GET" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+				<http:query-param paramName="startrecord" value="#['1']" />
+				<http:query-param paramName="endrecord" value="#['2']" />
+				<http:query-param paramName="changeid"
+					value="#['1898d846-c93c-11e7-abc4-cec278b6b50a']" />
+				<http:header headerName="Accept" value="application/json" />
+				<http:header headerName="X-Correlation-Id"
+					value="1898d846-c93c-11e7-abc4-cec278b6b50a" />
+
+
+			</http:request-builder>
+		</http:request>
+		<object-to-string-transformer doc:name="http response to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(200))]"
+			doc:name="Assert That - http.status eq 200" />
+		<munit:assert-true message="The Total Records count is not correct!"
+			condition="#[messageInboundProperty('total-records').is(eq(&quot;10&quot;))]"
+			doc:name="Total Records Count Assertion" />
+		<munit:assert-on-equals
+			message="The prepared get users response is not correct!"
+			expectedValue="#[getResource('GetUsersResponses/getAllUsersBasedOnChangeId.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			actualValue="#[message.payloadAs(String).replaceAll(&quot;\\s+&quot;,&quot;&quot;)]"
+			doc:name="Get Users Response Assertion" />
+	</munit:test>
+
+	<munit:test
+		name="get:/users/storeusers:users-api-config-400-application/json-BadRequestTest"
+		description="Verifying functionality of bad request (request with status as 'active' insted of 'Active')">
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="GET" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:query-param paramName="startrecord" value="#['1']"/>
+                <http:query-param paramName="endrecord" value="#['10']"/>
+                <http:query-param paramName="status" value="#['active']"/>
+                <http:header headerName="Accept" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50a"/>
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="400" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response 
+		to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(400))]"
+			doc:name="Assert That - http.status eq 400" />
+		<munit:assert-on-equals
+			message="The message in error response payload is not correct!"
+			expectedValue="#['Bad Request']" actualValue="#[json:message]"
+			doc:name="assert that - message is as expected" />
+		<munit:assert-on-equals
+			message="The errorDetails in error response payload is not correct!"
+			expectedValue="#['Invalid value \'active\' for query parameter status. Invalid element active. (org.mule.module.apikit.exception.InvalidQueryParameterException).']"
+			actualValue="#[json:errorDetails]" doc:name="Assert that -  errorDetails is as expected" />
+	</munit:test>
+
+	<munit:test
+		name="get:/users/storeusers:users-api-config-400-application/json-MissingMandiatoryFieldsTest"
+		description="Verifying functionality of invaild request (request without mandiatory fields  startreceord and endrecord)">
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="GET" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:header headerName="Accept" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50a"/>
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="400" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response 
+		to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(400))]"
+			doc:name="Assert That - http.status eq 400" />
+		<munit:assert-on-equals
+			message="The message in response payload is not correct!"
+			expectedValue="#['Bad Request']" actualValue="#[json:message]"
+			doc:name="assert that - message is as expected" />
+		<munit:assert-on-equals
+			message="The errorDetails in error response payload is not correct!"
+			expectedValue="#['Required query parameter startrecord not specified (org.mule.module.apikit.exception.InvalidQueryParameterException).']"
+			actualValue="#[json:errorDetails]" doc:name="Assert that -  errorDetails is as expected" />
+	</munit:test>
+
+	<munit:test
+		name="get:/users/storeusers:users-api-config-404-application/json-ResourceNotFoundTest"
+		description="Verifying functionality of calling Get Users with invalid URL">
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="GET" path="/users/storeuserss" doc:name="HTTP">
+			<http:request-builder>
+                <http:query-param paramName="startrecord" value="#['1']"/>
+                <http:query-param paramName="endrecord" value="#['10']"/>
+                <http:query-param paramName="status" value="#['Active']"/>
+                <http:header headerName="Accept" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50a"/>
+
+
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="404" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response 
+		to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(404))]"
+			doc:name="Assert That - http.status eq 404" />
+		<munit:assert-on-equals
+			message="The message in response payload is not correct!"
+			expectedValue="#['Resource Not Found']" actualValue="#[json:message]"
+			doc:name="Assert That - message is as expected" />
+
+
+	</munit:test>
+
+	<munit:test
+		name="get:/users/storeusers:users-api-config-405-application/json-MethodNotAllowedTest"
+		description="Verifying functionality of calling Get Users with invalid method POST insted of GET">
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="POST" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:query-param paramName="startrecord" value="#['1']"/>
+                <http:query-param paramName="endrecord" value="#['10']"/>
+                <http:query-param paramName="status" value="#['Active']"/>
+                <http:header headerName="Accept" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50a"/>
+
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="405" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response 
+		to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(405))]"
+			doc:name="Assert That - http.status eq 405" />
+		<munit:assert-on-equals
+			message="The message in response payload is not correct!"
+			expectedValue="#['Method Not Allowed']" actualValue="#[json:message]"
+			doc:name="Assert That - message is as expected" />
+
+	</munit:test>
+
+	<munit:test
+		name="get:/users/storeusers:users-api-config-406-application/xml-NotAcceptableTest"
+		description="Verifying functionality of invalid header Accept application/xml insted of application/json">
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="GET" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:query-param paramName="startrecord" value="#['1']"/>
+                <http:query-param paramName="endrecord" value="#['10']"/>
+                <http:query-param paramName="status" value="#['Active']"/>
+                <http:header headerName="Accept" value="application/xml"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50a"/>
+
+
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="406" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response 
+		to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(406))]"
+			doc:name="Assert That - http.status eq 406" />
+		<munit:assert-on-equals
+			message="The message in response payload is not correct!"
+			expectedValue="#['Not Acceptable']" actualValue="#[json:message]"
+			doc:name="Assert That - message is as expected" />
+	</munit:test>
+
+	<munit:test
+		name="get:/users/storeusers:users-api-config-500-application/json-DefaultExceptionTest"
+		description="Verifying functionality of ODS database down">
+		<dbserver:stop-db-server config-ref="GetUser_DB_Server"
+			doc:name="Stop DB Server" />
+		<http:request config-ref="HTTP_Request_Configuration"
+			method="GET" path="/users/storeusers" doc:name="HTTP">
+			<http:request-builder>
+                <http:query-param paramName="startrecord" value="#['1']"/>
+                <http:query-param paramName="endrecord" value="#['10']"/>
+                <http:query-param paramName="status" value="#['Active']"/>
+                <http:header headerName="Accept" value="application/json"/>
+                <http:header headerName="X-Correlation-Id" value="1898d846-c93c-11e7-abc4-cec278b6b50a"/>
+
+			</http:request-builder>
+			<http:success-status-code-validator
+				values="500" />
+		</http:request>
+		<object-to-string-transformer doc:name="http response 
+		to string" />
+		<munit:assert-true message="The HTTP Status code is not correct!"
+			condition="#[messageInboundProperty('http.status').is(eq(500))]"
+			doc:name="Assert That - http.status eq 500" />
+		<munit:assert-on-equals
+			message="The message in response payload is not correct!"
+			expectedValue="#['The application has encountered an unknown error. It doesn\'t appear to have affected your data, but our technical staff have been automatically notified and will be looking into this.']"
+			actualValue="#[json:message]" doc:name="Assert That - message is as expected" />
+	</munit:test>
+
+	<munit:after-suite name="get-users-functionaltestAfter_Suite"
+		description="Ater suite actions">
+		<dbserver:stop-db-server config-ref="GetUser_DB_Server"
+			doc:name="Stop DB Server" />
+	</munit:after-suite>
+</mule>

@@ -1,0 +1,22 @@
+{
+  "users": [
+  	{
+      "employeeID": "984805",
+      "fullName": "MISS Ghi Jkl",
+      "receiptName": "Ghi",
+      "status": "Active",
+      "swipeCards": [
+        {
+          "cardNumber": "984602",
+          "cardEffectiveFrom": "2013/05/01 00:00",
+          "cardEffectiveTo": "2016/11/02 23:59"
+        },
+        {
+          "cardNumber": "984603",
+          "cardEffectiveFrom": "2016/11/03 00:00"
+        }
+      ],
+      "workGroupID": "6"
+    }
+  ]
+}

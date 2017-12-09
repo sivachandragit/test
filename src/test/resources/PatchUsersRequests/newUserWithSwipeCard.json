@@ -1,0 +1,18 @@
+{
+  "users": [
+    {
+      "employeeID": "984804",
+      "fullName": "MRS. Siva Chandra",
+      "receiptName": "Siva",
+      "status": "Active",
+      "workGroupID": "2",
+      "swipeCards": [
+        {
+          "cardNumber": "984601",
+          "cardEffectiveFrom": "2013/05/01 00:00",
+          "cardEffectiveTo": "2016/11/02 23:59"
+        }
+      ]
+    }
+  ]
+}

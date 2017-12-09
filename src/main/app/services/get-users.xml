@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+	<sub-flow name="get-users-request-prepration-Sub_Flow">
+		<logger
+			message="--#[server.dateTime]-- Entered into App: #[app.name]-- Flow: #[flow.name]-- Sub Flow: get-users-request-prepration-Sub_Flow-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]-- status: #[flowVars.status]-- changeid: #[flowVars.changeId]--"
+			level="INFO" doc:name="get-users-request-prepration-Sub_Flow Entry Logger" />
+		<choice doc:name="Get Users count and Get Users dynimic select queries based on based on received start record, end record, status and changeId">
+			<when expression="#[flowVars.status==null &amp;&amp; flowVars.changeId!=null]">
+				<set-variable variableName="countQuery"
+					value="${GET_USERS_COUNT_BY_CHANGEID}" doc:name="Total Users Count Query  (status==null and changeid!=null)" />
+				<set-variable variableName="getUsersQuery" value="${GET_USERS_BY_CHANGEID}"
+					doc:name="Users Query to get users based on changeid" />
+			</when>
+			<when expression="#[flowVars.status!=null &amp;&amp; flowVars.changeId==null]">
+				<set-variable variableName="countQuery"
+					value="${GET_USERS_COUNT_BY_STATUS}" doc:name="Total Users Count Query  (status!=null and changeid==null)" />
+				<set-variable variableName="getUsersQuery" value="${GET_USERS_BY_STATUS}"
+					doc:name="Users Query to get users based on status" />
+			</when>
+			<when expression="#[flowVars.status!=null &amp;&amp; flowVars.changeId!=null]">
+				<set-variable variableName="countQuery"
+					value="${GET_USERS_COUNT_BY_STATUS_AND_CHANGEID}" doc:name="Total Users Count Query  (status!=null and changeid!=null)" />
+				<set-variable variableName="getUsersQuery"
+					value="${GET_USERS_BY_STATUS_AND_CHANGEID}" doc:name="Users Query to get users based on status and changeid" />
+			</when>
+			<otherwise>
+				<set-variable variableName="countQuery" value="${GET_ALL_USERS_COUNT}"
+					doc:name="Total Users Count Query (status==null and changeid==null)" />
+				<set-variable variableName="getUsersQuery" value="${GET_ALL_USERS}"
+					doc:name="Users Query to get all users" />
+			</otherwise>
+		</choice>
+		<logger
+			message="--#[server.dateTime]-- Before calling Sub Flow: pull_users_count_and_users_from_ODS-Sub_Flow to pull total users count and users based on received start record, end record, status and changeId-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]-- status: #[flowVars.status]-- changeid: #[flowVars.changeId]-- "
+			level="INFO"
+			doc:name="Logger before calling Sub Flow: pull_users_count_and_users_from_ODS-Sub_Flow" />
+		<flow-ref name="pull_users_count_and_users_from_ODS-Sub_Flow"
+			doc:name="pull_users_count_and_users_from_ODS-Sub_Flow_Call" />
+		<logger
+			message="--#[server.dateTime]-- After calling Sub Flow: pull_users_count_and_users_from_ODS-Sub_Flow to pull total users count and users based on received start record, end record, status and changeId-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]-- status: #[flowVars.status]-- changeid: #[flowVars.changeId]-- "
+			level="INFO"
+			doc:name="Logger after calling Sub Flow: pull_users_count_and_users_from_ODS-Sub_Flow" />
+		<dw:transform-message doc:name="List to JSON Transformation">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/json skipNullOn="everywhere"
+---
+
+users: payload groupBy $.EMPLOYEEID pluck {
+		employeeID: $$,
+		fullName: $[0].FULLNAME,
+		receiptName: $[0].RECEIPTNAME,
+		(status: 'Active' when $[0].IS_ACTIVE==true otherwise 'Inactive') when $[0].IS_ACTIVE?,
+		workGroupID: $[0].WORKGROUPID,
+		swipeCards: $ map {
+			cardNumber: $.CARDNUMBER,
+			(cardEffectiveFrom: $.CARDEFFECTIVEFROM as :localdatetime {format: p('outbound.date.format')} as :string {format: p('inbound.date.format')}) when $.CARDEFFECTIVEFROM?,
+			(cardEffectiveTo: $.CARDEFFECTIVETO as :localdatetime {format: p('outbound.date.format')} as :string {format: p('inbound.date.format')}) when $.CARDEFFECTIVETO?		
+		} when $.CARDNUMBER != null otherwise null
+}]]></dw:set-payload>
+		</dw:transform-message>
+		<logger
+			message="--#[server.dateTime]-- Exit from App: #[app.name]-- Flow: #[flow.name]-- Sub Flow: get-users-request-prepration-Sub_Flow-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]-- status: #[flowVars.status]-- changeid: #[flowVars.changeId]--"
+			level="INFO" doc:name="get-users-request-prepration-Sub_Flow Exit Logger" />
+	</sub-flow>
+</mule>

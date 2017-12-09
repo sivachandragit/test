@@ -1,0 +1,25 @@
+#%RAML 1.0 Trait
+queryParameters:
+  startrecord:
+    description: Starting record number
+    type: integer
+    required: true
+    example: 20
+    default: 0
+  endrecord:
+    description: Ending record number
+    type: integer
+    required: true
+    example: 80
+    default: 10
+  changeid:
+    description: Id of the change
+    type: string
+    required: false
+    example:  1898d846-c93c-11e7-abc4-cec278b6b50a
+  status:
+    description: Status of the users
+    type: string
+    required: false
+    enum: ["Active", "Inactive"]
+    example:  Active

@@ -1,0 +1,857 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:mock="http://www.mulesoft.org/schema/mule/mock"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/mock/current/mule-mock.xsd
+http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
+    <munit:config name="munit" doc:name="MUnit configuration" mock-connectors="false" mock-inbounds="false"/>
+    <spring:beans>
+        <spring:import resource="classpath:inbound/users-api.xml" />
+        <spring:import resource="classpath:common/error-handling.xml" />
+        <spring:import resource="classpath:services/get-users.xml" />
+        <spring:import resource="classpath:common/global.xml" />
+        <spring:import resource="classpath:services/upsert-users.xml" />
+        <spring:import resource="classpath:outbound/ods.xml" />
+    </spring:beans>
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow_EmptyUsersTest" description="Verifying functionality of empty users request" >
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/emptyRequest.json').asString()]" doc:name="Empty Users Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newUsersInfo']" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateUsersInfo]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateSwipeCardsInfo]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate']" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-NewUserTest" description="Verifying functionality of inserting new user without swipe card into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/newUser.json').asString()]" doc:name="New User Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#['984801']" actualValue="#[flowVars.newUsersInfo.get(0).get(&quot;employeeID&quot;)]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateUsersInfo]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateSwipeCardsInfo]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate']" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984801&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-NewUsersTest" description="Verifying functionality of inserting new users without swipe card into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/newUsers.json').asString()]" doc:name="New Users Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#['MRS. Ramesh']" actualValue="#[flowVars.newUsersInfo.get(1).get(&quot;fullName&quot;)]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateUsersInfo]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateSwipeCardsInfo]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate']" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984802&quot;,&quot;984803&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-NewUserWithSwipeCardTest" description="Verifying functionality of inserting new user with swipe card into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/newUserWithSwipeCard.json').asString()]" doc:name="New User With Swipe Card Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#['984804']" actualValue="#[flowVars.newUsersInfo.get(0).get(&quot;employeeID&quot;)]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#['984601']" actualValue="#[flowVars.'newSwipeCardsInfo'.get(0).get(&quot;cardNumber&quot;)]" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateUsersInfo]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateSwipeCardsInfo]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate']" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984804&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-NewUserWithSwipeCardsTest" description="Verifying functionality of inserting new user without swipe cards into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/newUserWithSwipeCards.json').asString()]" doc:name="New User With Swipe Cards Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#['984805']" actualValue="#[flowVars.newUsersInfo.get(0).get(&quot;employeeID&quot;)]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#['984603']" actualValue="#[flowVars.'newSwipeCardsInfo'.get(1).get(&quot;cardNumber&quot;)]" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateUsersInfo]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateSwipeCardsInfo]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate']" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984805&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-NewUsersWithSwipeCardsTest" description="Verifying functionality of inserting new users with swipe cards into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/newUsersWithSwipeCards.json').asString()]" doc:name="New Users With Swipe Cards Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#['984807']" actualValue="#[flowVars.newUsersInfo.get(1).get(&quot;employeeID&quot;)]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#['984607']" actualValue="#[flowVars.'newSwipeCardsInfo'.get(3).get(&quot;cardNumber&quot;)]" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateUsersInfo]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateSwipeCardsInfo]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate']" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984806&quot;,&quot;984807&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-ExistingUserTest" description="Verifying functionality of updating existing user without swipe card into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[{&quot;EMPLOYEEID&quot;:&quot;984808&quot;,&quot;FULLNAME&quot;:&quot;MRS. Ramesh&quot;,&quot;RECEIPTNAME&quot;:&quot;Ramesh&quot;,&quot;IS_ACTIVE&quot;:&quot;0&quot;,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null}]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/existingUser.json').asString()]" doc:name="Existing User Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.newUsersInfo]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#['MRS. Ramesh']" actualValue="#[flowVars.updateUsersInfo.get(0).get(&quot;fullName&quot;)]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateSwipeCardsInfo]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate']" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984808&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-ExistingUsersTest" description="Verifying functionality of updating existing users without swipe card into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[{&quot;EMPLOYEEID&quot;:&quot;984809&quot;,&quot;FULLNAME&quot;:&quot;MRS. Ramesh&quot;,&quot;RECEIPTNAME&quot;:&quot;Ramesh&quot;,&quot;IS_ACTIVE&quot;:&quot;0&quot;,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null},{&quot;EMPLOYEEID&quot;:&quot;984810&quot;,&quot;FULLNAME&quot;:&quot;MRS. Siva Chandra&quot;,&quot;RECEIPTNAME&quot;:&quot;Siva&quot;,&quot;IS_ACTIVE&quot;:&quot;1&quot;,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null}]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/existingUsers.json').asString()]" doc:name="Existing Users Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.newUsersInfo]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#['MRS. Siva Chandra']" actualValue="#[flowVars.updateUsersInfo.get(1).get(&quot;fullName&quot;)]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateSwipeCardsInfo]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate']" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984809&quot;,&quot;984810&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-ExistingUserWithSwipeCardTest" description="Verifying functionality of updating existing user with swipe card into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[{&quot;EMPLOYEEID&quot;:&quot;984811&quot;,&quot;FULLNAME&quot;:&quot;MISS Abc Def&quot;,&quot;RECEIPTNAME&quot;:&quot;Abc&quot;,&quot;IS_ACTIVE&quot;:&quot;1&quot;,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:&quot;984608&quot;,&quot;CARDEFFECTIVEFROM&quot;:&quot;2016-11-03 00:00&quot;,&quot;CARDEFFECTIVETO&quot;:null}]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/existingUserWithSwipeCard.json').asString()]" doc:name="Existing User With Swipe Card Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.newUsersInfo]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#['MISS Abc Def']" actualValue="#[flowVars.updateUsersInfo.get(0).get(&quot;fullName&quot;)]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#['2016-11-03 00:00:00']" actualValue="#[flowVars.updateSwipeCardsInfo.get(0).get(&quot;cardEffectiveFrom&quot;)]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate']" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984811&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-ExistingUserWithSwipeCardsTest" description="Verifying functionality of updating existing user with swipe cards into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[{&quot;EMPLOYEEID&quot;:&quot;984812&quot;,&quot;FULLNAME&quot;:&quot;MISS Ghi Jkl&quot;,&quot;RECEIPTNAME&quot;:&quot;Ghi&quot;,&quot;IS_ACTIVE&quot;:&quot;1&quot;,&quot;WORKGROUPID&quot;:&quot;6&quot;,&quot;CARDNUMBER&quot;:&quot;984609&quot;,&quot;CARDEFFECTIVEFROM&quot;:&quot;2013-05-01 00:00&quot;,&quot;CARDEFFECTIVETO&quot;:&quot;2016-11-02 23:59&quot;},{&quot;EMPLOYEEID&quot;:&quot;984812&quot;,&quot;FULLNAME&quot;:&quot;MISS Ghi Jkl&quot;,&quot;RECEIPTNAME&quot;:&quot;Ghi&quot;,&quot;IS_ACTIVE&quot;:&quot;1&quot;,&quot;WORKGROUPID&quot;:&quot;6&quot;,&quot;CARDNUMBER&quot;:&quot;984610&quot;,&quot;CARDEFFECTIVEFROM&quot;:&quot;2011-11-03 00:00&quot;,&quot;CARDEFFECTIVETO&quot;:&quot;2014-01-02 23:59&quot;}]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/existingUserWithSwipeCards.json').asString()]" doc:name="Existing User With Swipe Cards Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.newUsersInfo]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[1]" actualValue="#[flowVars.updateUsersInfo.get(0).get(&quot;status&quot;)]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#['2011-11-03 00:00:00']" actualValue="#[flowVars.updateSwipeCardsInfo.get(1).get(&quot;cardEffectiveFrom&quot;)]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate']" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984812&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-ExistingUsersWithSwipeCardsTest" description="Verifying functionality of updating existing users with swipes card into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[{&quot;EMPLOYEEID&quot;:&quot;984813&quot;,&quot;FULLNAME&quot;:&quot;MISS Ghi Jkl&quot;,&quot;RECEIPTNAME&quot;:&quot;Ghi&quot;,&quot;IS_ACTIVE&quot;:&quot;1&quot;,&quot;WORKGROUPID&quot;:&quot;6&quot;,&quot;CARDNUMBER&quot;:&quot;984611&quot;,&quot;CARDEFFECTIVEFROM&quot;:&quot;2013-05-01 00:00&quot;,&quot;CARDEFFECTIVETO&quot;:&quot;2016-11-02 23:59&quot;},{&quot;EMPLOYEEID&quot;:&quot;984813&quot;,&quot;FULLNAME&quot;:&quot;MISS Ghi Jkl&quot;,&quot;RECEIPTNAME&quot;:&quot;Ghi&quot;,&quot;IS_ACTIVE&quot;:&quot;1&quot;,&quot;WORKGROUPID&quot;:&quot;6&quot;,&quot;CARDNUMBER&quot;:&quot;984612&quot;,&quot;CARDEFFECTIVEFROM&quot;:&quot;2016-11-03 00:00&quot;,&quot;CARDEFFECTIVETO&quot;:null},{&quot;EMPLOYEEID&quot;:&quot;984814&quot;,&quot;FULLNAME&quot;:&quot;MR. Stu Vwx&quot;,&quot;RECEIPTNAME&quot;:&quot;Stu&quot;,&quot;IS_ACTIVE&quot;:&quot;0&quot;,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:&quot;984613&quot;,&quot;CARDEFFECTIVEFROM&quot;:&quot;2016-11-03 00:00&quot;,&quot;CARDEFFECTIVETO&quot;:null},{&quot;EMPLOYEEID&quot;:&quot;984814&quot;,&quot;FULLNAME&quot;:&quot;MR. Stu Vwx&quot;,&quot;RECEIPTNAME&quot;:&quot;Stu&quot;,&quot;IS_ACTIVE&quot;:&quot;0&quot;,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:&quot;984614&quot;,&quot;CARDEFFECTIVEFROM&quot;:&quot;2016-02-16 00:00&quot;,&quot;CARDEFFECTIVETO&quot;:&quot;2016-10-25 23:59&quot;}]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/existingUsersWithSwipeCards.json').asString()]" doc:name="Existing User With Swipe Cards Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.newUsersInfo]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[0]" actualValue="#[flowVars.updateUsersInfo.get(1).get(&quot;status&quot;)]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#['2016-02-16 00:00:00']" actualValue="#[flowVars.updateSwipeCardsInfo.get(3).get(&quot;cardEffectiveFrom&quot;)]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate']" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984813&quot;,&quot;984814&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-ExistingUserWithNewSwipeCardTest" description="Verifying functionality of updating existing user and inserting new swipe card into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[{&quot;EMPLOYEEID&quot;:&quot;984815&quot;,&quot;FULLNAME&quot;:&quot;MISS Ghi Jkl&quot;,&quot;RECEIPTNAME&quot;:&quot;Ghi&quot;,&quot;IS_ACTIVE&quot;:&quot;1&quot;,&quot;WORKGROUPID&quot;:&quot;6&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null}]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/existingUserWithNewSwipeCard.json').asString()]" doc:name="Existing User With New Swipe Card Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.newUsersInfo]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[1]" actualValue="#[flowVars.updateUsersInfo.get(0).get(&quot;status&quot;)]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateSwipeCardsInfo]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[&quot;984615&quot;]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate'.get(0).get(&quot;cardNumber&quot;)]" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984815&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-ExistingUserWithNewSwipeCardsTest" description="Verifying functionality of updating existing user and inserting new swipe cards into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[{&quot;EMPLOYEEID&quot;:&quot;984816&quot;,&quot;FULLNAME&quot;:&quot;MISS Ghi Jkl&quot;,&quot;RECEIPTNAME&quot;:&quot;Ghi&quot;,&quot;IS_ACTIVE&quot;:&quot;1&quot;,&quot;WORKGROUPID&quot;:&quot;6&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null}]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/existingUserWithNewSwipeCards.json').asString()]" doc:name="Existing User With New Swipe Cards Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.newUsersInfo]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[1]" actualValue="#[flowVars.updateUsersInfo.get(0).get(&quot;status&quot;)]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateSwipeCardsInfo]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[&quot;984617&quot;]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate'.get(1).get(&quot;cardNumber&quot;)]" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984816&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-ExistingUsersWithNewSwipeCardsTest" description="Verifying functionality of updating existing users and inserting new swipe cards into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[{&quot;EMPLOYEEID&quot;:&quot;984819&quot;,&quot;FULLNAME&quot;:&quot;MRS. Siva Chandra&quot;,&quot;RECEIPTNAME&quot;:&quot;Siva&quot;,&quot;IS_ACTIVE&quot;:&quot;0&quot;,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null},{&quot;EMPLOYEEID&quot;:&quot;984820&quot;,&quot;FULLNAME&quot;:&quot;MRS. Ramesh&quot;,&quot;RECEIPTNAME&quot;:&quot;Ramesh&quot;,&quot;IS_ACTIVE&quot;:&quot;1&quot;,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:null,&quot;CARDEFFECTIVEFROM&quot;:null,&quot;CARDEFFECTIVETO&quot;:null}]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/existingUsersWithNewSwipeCards.json').asString()]" doc:name="Existing User With New Swipe Cards Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.newUsersInfo]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[1]" actualValue="#[flowVars.updateUsersInfo.get(0).get(&quot;status&quot;)]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.updateSwipeCardsInfo]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[&quot;984643&quot;]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate'.get(2).get(&quot;cardNumber&quot;)]" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984819&quot;,&quot;984820&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+    
+    <munit:test name="upsert-users-unittest-suite-upsert-users-request-prepration-Sub_Flow-ExistingUsersWithExistingAndNewSwipeCardsTest" description="Verifying functionality of updating existing users &amp; swipe cards and inserting new swipe cards into ODS">
+     <mock:when messageProcessor=".*:.*" doc:name="Mock Get Existing Users">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Existing Users']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[[{&quot;EMPLOYEEID&quot;:&quot;984817&quot;,&quot;FULLNAME&quot;:&quot;MRS. Siva Chandra&quot;,&quot;RECEIPTNAME&quot;:&quot;Siva&quot;,&quot;IS_ACTIVE&quot;:&quot;1&quot;,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:&quot;984618&quot;,&quot;CARDEFFECTIVEFROM&quot;:&quot;2013-05-01 00:00&quot;,&quot;CARDEFFECTIVETO&quot;:&quot;2016-11-02 23:59&quot;},{&quot;EMPLOYEEID&quot;:&quot;984817&quot;,&quot;FULLNAME&quot;:&quot;MRS. Siva Chandra&quot;,&quot;RECEIPTNAME&quot;:&quot;Siva&quot;,&quot;IS_ACTIVE&quot;:&quot;1&quot;,&quot;WORKGROUPID&quot;:&quot;1&quot;,&quot;CARDNUMBER&quot;:&quot;984619&quot;,&quot;CARDEFFECTIVEFROM&quot;:&quot;2014-05-01 00:00&quot;,&quot;CARDEFFECTIVETO&quot;:&quot;2017-11-02 23:59&quot;},{&quot;EMPLOYEEID&quot;:&quot;984818&quot;,&quot;FULLNAME&quot;:&quot;MRS. Ramesh&quot;,&quot;RECEIPTNAME&quot;:&quot;Ramesh&quot;,&quot;IS_ACTIVE&quot;:&quot;0&quot;,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:&quot;984620&quot;,&quot;CARDEFFECTIVEFROM&quot;:&quot;2011-05-01 00:00&quot;,&quot;CARDEFFECTIVETO&quot;:&quot;2016-11-02 23:59&quot;},{&quot;EMPLOYEEID&quot;:&quot;984818&quot;,&quot;FULLNAME&quot;:&quot;MRS. Ramesh&quot;,&quot;RECEIPTNAME&quot;:&quot;Ramesh&quot;,&quot;IS_ACTIVE&quot;:&quot;0&quot;,&quot;WORKGROUPID&quot;:&quot;2&quot;,&quot;CARDNUMBER&quot;:&quot;984621&quot;,&quot;CARDEFFECTIVEFROM&quot;:&quot;2011-05-01 00:00&quot;,&quot;CARDEFFECTIVETO&quot;:&quot;2016-11-02 23:59&quot;}]]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Users Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Users Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New SwipeCards Insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New SwipeCards Insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing Users Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing Users Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Existing SwipeCards Updation">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Existing SwipeCards Updation']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock New Swipe Cards under update insertion">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['New Swipe Cards under update insertion']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock User Change Audit">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['User Change Audit']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <munit:set payload="#[getResource('PatchUsersRequests/existingUsersWithExistingAndNewSwipeCards.json').asString()]" doc:name="Existing Users With Existing And New Swipe Cards Request" mimeType="application/json"/>
+        <flow-ref name="upsert-users-request-prepration-Sub_Flow" doc:name="upsert-users-request-prepration-Sub_Flow_Call"/>
+        <munit:assert-on-equals message="The prepared new users request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.newUsersInfo]" doc:name="New Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards request to DB is not correct!" expectedValue="#[[]]" actualValue="#[flowVars.'newSwipeCardsInfo']" doc:name="New Swipe Cards Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing users request to DB is not correct!" expectedValue="#[&quot;2&quot;]" actualValue="#[flowVars.updateUsersInfo.get(1).get(&quot;workGroupID&quot;)]" doc:name="Existing Users Request Assertion"/>
+        <munit:assert-on-equals message="The prepared existing swipe cards request to DB is not correct!" expectedValue="#[&quot;984620&quot;]" actualValue="#[flowVars.updateSwipeCardsInfo.get(2).get(&quot;cardNumber&quot;)]" doc:name="Existing Swipe Cards request Assertion"/>
+        <munit:assert-on-equals message="The prepared new swipe cards under existing users request to DB is not correct!" expectedValue="#[&quot;984625&quot;]" actualValue="#[flowVars.'newSwipeCardsInfoInUpdate'.get(3).get(&quot;cardNumber&quot;)]" doc:name="New Swipe Cards Under Existing Users request Assertion"/>
+        <munit:assert-on-equals message="The prepared received employeeid's request to DB is not correct!" expectedValue="#[[&quot;984817&quot;,&quot;984818&quot;]]" actualValue="#[flowVars.allEmployeeIDs]" doc:name="Received EmployeeId's Request Assertion"/>
+    </munit:test>
+</mule>

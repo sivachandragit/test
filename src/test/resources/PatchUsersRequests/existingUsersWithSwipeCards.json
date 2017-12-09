@@ -1,0 +1,40 @@
+{
+  "users": [
+  	{
+      "employeeID": "984813",
+      "fullName": "MISS Ghi Jkl",
+      "receiptName": "Ghi",
+      "status": "Active",
+      "swipeCards": [
+        {
+          "cardNumber": "984611",
+          "cardEffectiveFrom": "2013/05/01 00:00",
+          "cardEffectiveTo": "2016/11/02 23:59"
+        },
+        {
+          "cardNumber": "984612",
+          "cardEffectiveFrom": "2016/11/03 00:00"
+        }
+      ],
+      "workGroupID": "6"
+    },
+    {
+      "employeeID": "984814",
+      "fullName": "MR. Stu Vwx",
+      "receiptName": "Stu",
+      "status": "Inactive",
+      "swipeCards": [
+      	{
+          "cardNumber": "984613",
+          "cardEffectiveFrom": "2016/11/03 00:00"
+        },
+        {
+          "cardNumber": "984614",
+          "cardEffectiveFrom": "2016/02/16 00:00",
+          "cardEffectiveTo": "2016/10/25 23:59"
+        }
+      ],
+      "workGroupID": "1"
+    }
+  ]
+}

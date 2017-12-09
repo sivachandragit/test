@@ -1,0 +1,18 @@
+type: x-client-id-secret
+displayName: Client ID & Secret
+describedBy:
+  headers:
+    client_id:
+      type: string
+      required: true
+      example: "5e67817e61d5aa08ef54614092fa7cb7"
+    client_secret:
+      type: string
+      required: true
+      example: "7bc7af29041645fe80aa5d16e71876e5"
+  responses:
+  responses:
+    401:
+      description: Unauthorised.
+    403:
+      description: Invalid Credentials passed.

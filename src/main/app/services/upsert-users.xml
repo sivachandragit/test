@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+	<sub-flow name="upsert-users-request-prepration-Sub_Flow">
+		<logger
+			message="--#[server.dateTime]-- Entered into App: #[app.name]-- Flow: #[flow.name]-- Sub Flow: upsert-users-request-prepration-Sub_Flow--   correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--"
+			level="INFO" doc:name="upsert-users-request-prepration-Sub_Flow Entry Logger" />
+		<dw:transform-message doc:name="JSON to List Transformation">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+	{(payload.users map {
+		($.employeeID) : ({
+		(employeeID: $.employeeID) when $.employeeID?,
+		(fullName: $.fullName) when $.fullName?,
+		(receiptName: $.receiptName) when $.receiptName?,
+		(status: 1 when $.status=='Active' otherwise 0) when $.status?,
+		(workGroupID: $.workGroupID) when $.workGroupID?,
+		(swipeCards: $.swipeCards map {
+			(cardNumber: $.cardNumber) when $.cardNumber?,
+			(cardEffectiveFrom: $.cardEffectiveFrom as :localdatetime {format: p('inbound.date.format')} as :string {format: p('outbound.date.format')}) when $.cardEffectiveFrom?,
+			(cardEffectiveTo: $.cardEffectiveTo as :localdatetime {format: p('inbound.date.format')} as :string {format: p('outbound.date.format')}) when $.cardEffectiveTo?
+		}) when $.swipeCards?})
+	})}]]></dw:set-payload>
+			<dw:set-variable variableName="receivedUserIDs"><![CDATA[%dw 1.0
+%output application/java
+%var empid= payload.users map ((key,value) -> key.employeeID) joinBy "','"
+---
+"'" ++ empid ++ "'"]]></dw:set-variable>
+			<dw:set-variable variableName="allEmployeeIDs"><![CDATA[%dw 1.0
+%output application/java
+---
+(payload.users.employeeID map $ as :string) when null!=payload.users.employeeID otherwise []]]></dw:set-variable>
+		</dw:transform-message>
+		<set-variable variableName="transformedPayload" value="#[payload]"
+			doc:name="Transformed Payload" />
+
+		<enricher doc:name="Message Enricher">
+			<processor-chain doc:name="Processor Chain">
+				<logger
+					message="--#[server.dateTime]-- Before calling Sub Flow: pull_existing_users_from_ODS-Sub_Flow to pull the users based on received employeeIds-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--"
+					level="INFO"
+					doc:name="Logger before calling Sub Flow: pull_existing_users_from_ODS-Sub_Flow" />
+				<flow-ref name="pull_existing_users_from_ODS-Sub_Flow"
+					doc:name="pull_existing_users_from_ODS-Sub_Flow_Call" />
+
+				<logger
+					message="--#[server.dateTime]-- After calling Sub Flow: pull_existing_users_from_ODS-Sub_Flow to pull the users based on received employeeIds-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--"
+					level="INFO"
+					doc:name="Logger after calling Sub Flow: pull_existing_users_from_ODS-Sub_Flow" />
+				<dw:transform-message doc:name="Existing Users Transformed Payload">
+					<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{(payload map ((existingUser, indexOfPayload) -> {
+	(existingUser.EMPLOYEEID ++ "_" ++ existingUser.CARDNUMBER) : (existingUser),
+	(existingUser.EMPLOYEEID) : (existingUser)
+} when (existingUser.CARDNUMBER != null) otherwise {
+	(existingUser.EMPLOYEEID) : (existingUser)
+}))
+}]]></dw:set-payload>
+					<dw:set-variable variableName="existingUserIds"><![CDATA[%dw 1.0
+%output application/java
+---
+(payload distinctBy $.EMPLOYEEID filter (flowVars.allEmployeeIDs contains $.EMPLOYEEID) map {
+	"empId" : ($.EMPLOYEEID)
+}).*empId]]></dw:set-variable>
+					<dw:set-variable variableName="newUserIds"><![CDATA[%dw 1.0
+%output application/java
+%var existingEmplIds = (payload.EMPLOYEEID map $ as :string) when null!=payload.EMPLOYEEID otherwise ""
+---
+(flowVars.allEmployeeIDs map ((allEmpIds, indexOfPayload) -> {
+	"empId" : (allEmpIds)
+} when not (existingEmplIds contains allEmpIds) otherwise "")
+).*empId]]></dw:set-variable>
+				</dw:transform-message>
+
+			</processor-chain>
+			<enrich source="#[payload]" target="#[flowVars.existingUserIdsInfo]" />
+
+			<enrich source="#[flowVars.existingUserIds]" target="#[flowVars.existingUserIds]" />
+			<enrich source="#[flowVars.newUserIds]" target="#[flowVars.newUserIds]" />
+		</enricher>
+		<dw:transform-message doc:name="New Users and SwipeCards Request Prepration">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+(flowVars.newUserIds map ((newEmpIds, indexOfPayload) -> {
+	(using (user=flowVars.transformedPayload[newEmpIds]) {
+		(employeeID: user.employeeID) when user.employeeID?,
+		(fullName: user.fullName) when user.fullName?,
+		(receiptName: user.receiptName) when user.receiptName?,
+		(status: user.status) when user.status?,
+		(workGroupID: user.workGroupID) when user.workGroupID?		
+	})
+})) when (null!=flowVars.newUserIds) otherwise []]]></dw:set-payload>
+			<dw:set-variable variableName="newSwipeCardsInfo"><![CDATA[%dw 1.0
+%output application/java
+%var swipeCards = ((flowVars.newUserIds filter (null!=flowVars.transformedPayload[$].swipeCards) map ((newEmpIds, indexOfPayload) -> {
+		(flowVars.transformedPayload[newEmpIds].*swipeCards map ((swipe, indexOfPayload) -> {
+		swipeCards: (swipe map {
+		employeeID: newEmpIds,
+		(cardNumber: $.cardNumber) when $.cardNumber?,
+		(cardEffectiveFrom: $.cardEffectiveFrom) when $.cardEffectiveFrom?,
+		(cardEffectiveTo: $.cardEffectiveTo) when $.cardEffectiveTo?	
+				})
+				}))
+}))..swipeCards) when (null!=flowVars.newUserIds) otherwise []
+---
+flatten swipeCards when null!=swipeCards otherwise []
+
+]]></dw:set-variable>
+		</dw:transform-message>
+		<set-variable variableName="newUsersInfo" value="#[payload]"
+			doc:name="New Users Info" />
+		<dw:transform-message
+			doc:name="Updated Users, SwipeCards and New SwipeCards under updated Request Prepartion">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+(flowVars.existingUserIds map ((existingEmpIds, indexOfPayload) -> {
+	(using (receivedUser=flowVars.transformedPayload[existingEmpIds], existingUser=flowVars.existingUserIdsInfo[existingEmpIds]) {
+		employeeID: receivedUser.employeeID when receivedUser.employeeID !=null otherwise existingUser.EMPLOYEEID,
+		fullName: receivedUser.fullName when receivedUser.fullName !=null otherwise existingUser.FULLNAME,
+		receiptName: receivedUser.receiptName when receivedUser.receiptName !=null otherwise existingUser.RECEIPTNAME,
+		status: receivedUser.status when receivedUser.status !=null otherwise existingUser.STATUS,
+		workGroupID: receivedUser.workGroupID when receivedUser.workGroupID !=null otherwise existingUser.WORKGROUPID		
+	})
+})) when (null!=flowVars.existingUserIds) otherwise []]]></dw:set-payload>
+			<dw:set-variable variableName="updateSwipeCardsInfo"><![CDATA[%dw 1.0
+%output application/java
+%var swipeCards = ((flowVars.existingUserIds filter (null!=flowVars.transformedPayload[$].swipeCards) map ((existingEmpIds, indexOfPayload) -> {
+		(flowVars.transformedPayload[existingEmpIds].*swipeCards map ((swipe, indexOfPayload) -> {
+		swipeCards: (swipe filter (null!=flowVars.existingUserIdsInfo[existingEmpIds  ++ "_" ++  $.cardNumber]) map {
+		(using (receivedUser=flowVars.existingUserIdsInfo[existingEmpIds ++ "_" ++ $.cardNumber]) {
+		employeeID: existingEmpIds,
+		cardNumber: $.cardNumber when null != $.cardNumber otherwise receivedUser.CARDNUMBER ,
+		cardEffectiveFrom: $.cardEffectiveFrom when null != $.cardEffectiveFrom otherwise receivedUser.CARDEFFECTIVEFROM,
+		cardEffectiveTo: $.cardEffectiveTo when null != $.cardEffectiveTo otherwise receivedUser.CARDEFFECTIVETO
+		})
+		})
+	}))
+}))..swipeCards) when (null!=flowVars.existingUserIds) otherwise []
+---
+flatten swipeCards when null!=swipeCards otherwise []
+]]></dw:set-variable>
+			<dw:set-variable variableName="newSwipeCardsInfoInUpdate"><![CDATA[%dw 1.0
+%output application/java
+%var swipeCards = ((flowVars.existingUserIds filter (null!=flowVars.transformedPayload[$].swipeCards) map ((existingEmpIds, indexOfPayload) -> {
+		(flowVars.transformedPayload[existingEmpIds].*swipeCards map ((swipe, indexOfPayload) -> {
+		swipeCards: (swipe filter (null==flowVars.existingUserIdsInfo[existingEmpIds  ++ "_" ++  $.cardNumber]) map {
+		employeeID: existingEmpIds,
+		(cardNumber: $.cardNumber) when $.cardNumber?,
+		(cardEffectiveFrom: $.cardEffectiveFrom) when $.cardEffectiveFrom?,
+		(cardEffectiveTo: $.cardEffectiveTo) when $.cardEffectiveTo?
+		})
+	}))
+}))..swipeCards) when (null!=flowVars.existingUserIds) otherwise []
+---
+flatten swipeCards when null!=swipeCards otherwise []
+
+]]></dw:set-variable>
+		</dw:transform-message>
+		<set-variable variableName="updateUsersInfo" value="#[payload]"
+			doc:name="Updated Users Info" />
+		<logger
+			message="--#[server.dateTime]-- Before calling Sub Flow: upsert_users_into_ODS-Sub_Flow to upsert received users into ODS-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--"
+			level="INFO"
+			doc:name="Logger before calling Sub Flow: upsert_users_into_ODS-Sub_Flow" />
+		<flow-ref name="upsert_users_into_ODS-Sub_Flow" doc:name="upsert_users_into_ODS-Sub_Flow_Call" />
+		<logger
+			message="--#[server.dateTime]-- After calling Sub Flow: upsert_users_into_ODS-Sub_Flow to upsert received users into ODS-- correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--"
+			level="INFO" doc:name="Logger after calling Sub Flow: upsert_users_into_ODS-Sub_Flow" />
+		<logger level="INFO"
+			doc:name="upsert-users-request-prepration-Sub_Flow Exit Logger"
+			message="--#[server.dateTime]-- Exit from App: #[app.name]-- Flow: #[flow.name]-- Sub Flow: upsert-users-request-prepration-Sub_Flow--   correlationID: #[flowVars.correlationID]-- messageID: #[flowVars.messageID]--" />
+
+	</sub-flow>
+
+
+
+</mule>

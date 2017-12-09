@@ -1,0 +1,11 @@
+{
+  "users": [
+    {
+      "employeeID": "984808",
+      "fullName": "MRS. Ramesh",
+      "receiptName": "Ramesh",
+      "status": "Inactive",
+      "workGroupID": "1"
+    }
+  ]
+}

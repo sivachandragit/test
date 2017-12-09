@@ -1,0 +1,17 @@
+{
+  "users": [
+  	{
+      "employeeID": "984811",
+      "fullName": "MISS Abc Def",
+      "receiptName": "Abc",
+      "status": "Active",
+      "swipeCards": [
+        {
+          "cardNumber": "984608",
+          "cardEffectiveFrom": "2016/11/03 00:00"
+        }
+      ],
+      "workGroupID": "1"
+    }
+  ]
+}

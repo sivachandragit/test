@@ -1,0 +1,9 @@
+#%RAML 1.0 Trait
+description: API requests must include a Transaction ID for tracking requests through API layers.
+headers:
+  X-Correlation-Id:
+    description: An ID to track API calls end to end
+    required: true
+    minLength: 36
+    maxLength: 36
+    example: 1898d846-c93c-11e7-abc4-cec278b6b50a
