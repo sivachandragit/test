@@ -137,4 +137,14 @@
     <scope>test</scope>
   </dependency>
     </dependencies>
+	<repositories>
+    <repository>
+        <id>mule-deps</id>
+        <name>Mule Dependencies</name>
+        <url>http://dist.codehaus.org/mule/dependencies/maven2</url>
+        <snapshots>
+            <enabled>false</enabled>
+        </snapshots>
+    </repository>
+</repositories>
 </project>
