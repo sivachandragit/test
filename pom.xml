@@ -5,6 +5,7 @@
 		<groupId>com.hof.epos</groupId>
 		<artifactId>utility-core</artifactId>
 		<version>1.0.0-SNAPSHOT</version>
+		<relativePath>../utility-core/pom.xml</relativePath>
 	</parent>
 
 	<modelVersion>4.0.0</modelVersion>
