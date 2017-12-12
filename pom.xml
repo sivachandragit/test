@@ -84,6 +84,9 @@
 				</executions>
 				<configuration>
 					<coverage>
+					<ignoreFlows>
+						<ignoreFlow>users-api-console</ignoreFlow>       
+					</ignoreFlows>
 						<runCoverage>true</runCoverage>
 						<formats>
 							<format>html</format>
